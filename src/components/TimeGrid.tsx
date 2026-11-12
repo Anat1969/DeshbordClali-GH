@@ -19,11 +19,12 @@ interface Props {
   onSelect: (iso: string) => void
   onAdd: (iso: string, time?: string) => void
   onOpenEvent: (e: CalEvent) => void
+  single?: boolean // בתצוגת יום: לחיצה אחת על משבצת שעה מוסיפה אירוע
 }
 
 // רשת שעות ליום ולשבוע: שורה לכל שעה, אירועים עם שעה ממוקמים לפי השעה, ואירועים בלי שעה בשורת "כל היום".
 // לחיצה כפולה על שעה פותחת אירוע חדש באותו יום ובאותה שעה
-export default function TimeGrid({ days, events, milestones, selected, nextId, flashId, onSelect, onAdd, onOpenEvent }: Props) {
+export default function TimeGrid({ days, events, milestones, selected, nextId, flashId, onSelect, onAdd, onOpenEvent, single }: Props) {
   const today = todayIso()
   const scroller = useRef<HTMLDivElement>(null)
   const cols = `3.2rem repeat(${days.length}, minmax(0, 1fr))`
@@ -59,6 +60,12 @@ export default function TimeGrid({ days, events, milestones, selected, nextId, f
     if (scroller.current) scroller.current.scrollTop = Math.max(0, first - 1) * HOUR
   }, [days, byDay])
 
+  // לחיצה על משבצת: השעה נקבעת לפי המיקום בתוך העמודה
+  const slotAdd = (iso: string) => (ev: React.MouseEvent<HTMLDivElement>) => {
+    const r = ev.currentTarget.getBoundingClientRect()
+    onAdd(iso, `${pad(Math.min(23, Math.max(0, Math.floor((ev.clientY - r.top) / HOUR))))}:00`)
+  }
+
   const now = new Date()
   const nowTop = (now.getHours() + now.getMinutes() / 60) * HOUR
 
@@ -79,7 +86,7 @@ export default function TimeGrid({ days, events, milestones, selected, nextId, f
       <div className="grid border-b-2 border-[#C6CCD6]" style={{ gridTemplateColumns: cols }}>
         <div className="flex items-center justify-center text-xs text-mute">כל היום</div>
         {days.map((iso) => (
-          <div key={iso} className="flex min-h-9 flex-col gap-1 border-s border-[#E3E6EB] p-1" onDoubleClick={() => onAdd(iso)} title="לחיצה כפולה: הוספת אירוע">
+          <div key={iso} className="flex min-h-9 flex-col gap-1 border-s border-[#E3E6EB] p-1" onClick={single ? () => onAdd(iso) : undefined} onDoubleClick={single ? undefined : () => onAdd(iso)} title={single ? 'לחיצה: הוספת אירוע' : 'לחיצה כפולה: הוספת אירוע'}>
             {(milestones.get(iso) ?? []).map((m, i) => (
               <div key={i} className={`flex items-start gap-1 rounded border-2 border-dashed border-navy bg-white/70 px-1 text-xs ${m.done ? 'text-mute line-through' : ''}`}>
                 <Icon name="diamond" size={11} className="mt-0.5 shrink-0 text-navy" /><span className="break-words">{m.name}</span>
@@ -100,11 +107,9 @@ export default function TimeGrid({ days, events, milestones, selected, nextId, f
             const wk = weekdayOf(iso)
             return (
               <div key={iso} className="relative border-s border-[#E3E6EB]" style={{ background: wk === 5 || wk === 6 ? '#F3F4F6' : undefined }}
-                onDoubleClick={(ev) => {
-                  const r = ev.currentTarget.getBoundingClientRect()
-                  onAdd(iso, `${pad(Math.min(23, Math.max(0, Math.floor((ev.clientY - r.top) / HOUR))))}:00`)
-                }}
-                title="לחיצה כפולה על שעה: הוספת אירוע בשעה הזו">
+                onClick={single ? slotAdd(iso) : undefined}
+                onDoubleClick={single ? undefined : slotAdd(iso)}
+                title={single ? 'לחיצה על שעה: הוספת אירוע בשעה הזו' : 'לחיצה כפולה על שעה: הוספת אירוע בשעה הזו'}>
                 {HOURS.map((h) => <div key={h} className="border-t border-[#E3E6EB]" style={{ height: HOUR }} />)}
                 {iso === today && <div className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-bad" style={{ top: nowTop }}><span className="absolute -top-1.5 end-0 h-3 w-3 rounded-full bg-bad" /></div>}
                 {byDay.get(iso)?.timed.map(({ e, col, of }) => {
