@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import type { CalEvent } from '../types'
+import CategoryLegend from './CategoryLegend'
+import { SLOTS, slotOf, tint } from '../lib/categories'
 import { HE_DAYS_SHORT, HE_MONTHS, monthGrid, todayIso } from '../lib/dateUtils'
 
 interface Props {
@@ -50,6 +52,9 @@ export default function CalendarMonthView({ year, month, events, selected, flash
             const list = byDate.get(c.iso) ?? []
             const isSel = c.iso === selected
             const isToday = c.iso === today
+            // צבע היום: צבע הקטגוריה. כמה קטגוריות באותו יום מוצגות כפסים
+            const dayColors = SLOTS.filter((sl) => list.some((e) => e.category === sl.key)).map((sl) => tint(sl.color))
+            const dayBg = dayColors.length === 0 ? undefined : dayColors.length === 1 ? dayColors[0] : `linear-gradient(90deg, ${dayColors.map((col, i) => `${col} ${(i * 100) / dayColors.length}% ${((i + 1) * 100) / dayColors.length}%`).join(', ')})`
             return (
               <div
                 key={c.iso}
@@ -57,10 +62,11 @@ export default function CalendarMonthView({ year, month, events, selected, flash
                 tabIndex={0}
                 aria-selected={isSel}
                 aria-label={`${c.day} ב${HE_MONTHS[Number(c.iso.slice(5, 7)) - 1]}${list.length ? `, ${list.length} אירועים` : ''}`}
+                style={dayBg ? { background: dayBg } : undefined}
                 onClick={() => onSelect(c.iso)}
                 onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(c.iso))}
                 className={`flex min-h-12 cursor-pointer flex-col items-center rounded-lg p-1 transition-colors sm:items-stretch sm:p-1.5 ${
-                  isSel ? 'bg-[#E8ECF4] shadow-[inset_0_0_0_2px_#1A2B4A]' : 'hover:bg-soft'
+                  isSel ? 'bg-[#E8ECF4] shadow-[inset_0_0_0_2px_#1A2B4A]' : dayBg ? '' : 'hover:bg-soft'
                 } ${c.inMonth ? '' : 'opacity-35'}`}
               >
                 <span className={`num mx-auto text-sm sm:mx-0 sm:self-start ${isToday ? 'rounded-md bg-navy px-1.5 font-semibold text-white' : isSel ? 'font-semibold' : ''}`}>
@@ -69,7 +75,7 @@ export default function CalendarMonthView({ year, month, events, selected, flash
                 {/* נייד: נקודות. מסך רחב: כרטיסונים עם שם האירוע */}
                 <div className="mt-1 flex gap-1 sm:hidden">
                   {list.slice(0, 3).map((e) => (
-                    <span key={e.id} className="h-1.5 w-1.5 rounded-full bg-navy" />
+                    <span key={e.id} className="h-1.5 w-1.5 rounded-full" style={{ background: slotOf(e.category)?.color ?? '#1A2B4A' }} />
                   ))}
                 </div>
                 <div className="mt-1 hidden min-h-0 flex-col gap-1 overflow-hidden sm:flex">
@@ -81,7 +87,8 @@ export default function CalendarMonthView({ year, month, events, selected, flash
                         ev.stopPropagation()
                         onOpenEvent(e)
                       }}
-                      className={`flex items-center gap-1.5 rounded-md bg-navy px-1.5 py-0.5 text-right text-xs text-white hover:opacity-85 ${flashId === e.id ? 'flash' : ''}`}
+                      style={{ background: slotOf(e.category)?.color ?? '#1A2B4A', color: slotOf(e.category)?.fg ?? '#FFFFFF' }}
+                      className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-right text-xs hover:opacity-85 ${flashId === e.id ? 'flash' : ''}`}
                       title={e.title}
                     >
                       {e.event_time && <span className="num shrink-0 opacity-75">{e.event_time.slice(0, 5)}</span>}
@@ -95,9 +102,7 @@ export default function CalendarMonthView({ year, month, events, selected, flash
           })}
         </div>
       </div>
-      <p className="mt-2 text-xs text-mute">
-        נקודה או כרטיסון כחול: יש אירוע. מסגרת כחולה: היום שנבחר. ריבוע מלא: היום.
-      </p>
+      <CategoryLegend />
     </section>
   )
 }

@@ -11,13 +11,15 @@ import { Ctx } from './lib/ctx'
 import { useAccess } from './hooks/useAccess'
 import { useEvents } from './hooks/useEvents'
 import { useUpload } from './hooks/useUpload'
+import { useCategories } from './hooks/useCategories'
 import { demoMode } from './lib/supabase'
 
 export default function App() {
   const access = useAccess()
   const authed = access.allowed
   const ev = useEvents(authed)
-  const up = useUpload()
+  const cats = useCategories(authed)
+  const up = useUpload(cats.names)
   const fileInput = useRef<HTMLInputElement>(null)
   const [paste, setPaste] = useState(false)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
@@ -54,6 +56,7 @@ export default function App() {
       <Ctx.Provider
         value={{
           ev,
+          cats,
           pickFile: () => fileInput.current?.click(),
           openPaste: () => setPaste(true),
           newManual: up.manual,

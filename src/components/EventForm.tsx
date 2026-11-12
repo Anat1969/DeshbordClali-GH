@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import type { EventDraft } from '../types'
 import { useSpeech } from '../hooks/useSpeech'
+import { SLOTS, slotOf } from '../lib/categories'
+import { useApp } from '../lib/ctx'
 
 // טופס אירוע משותף לאישור חילוץ ולעריכה
 export default function EventForm({ value, onChange, showErrors }: { value: EventDraft; onChange: (v: EventDraft) => void; showErrors: boolean }) {
+  const { cats } = useApp()
   const [peopleText, setPeopleText] = useState(value.people.join(', '))
   const set = <K extends keyof EventDraft>(k: K, v: EventDraft[K]) => onChange({ ...value, [k]: v })
   const speech = useSpeech((t) => set('description', ((value.description ?? '') + ' ' + t).trim()))
@@ -29,6 +32,33 @@ export default function EventForm({ value, onChange, showErrors }: { value: Even
         </div>
       </div>
       {missingDate && <p className="-mt-2 text-sm text-bad">לא נמצא תאריך במסמך. בחרי תאריך כדי לשמור.</p>}
+      <div>
+        <div className="label">קטגוריה (קובעת את צבע היום)</div>
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="קטגוריה">
+          <button type="button" role="radio" aria-checked={!value.category} className="btn !min-h-10 !px-4" style={!value.category ? { boxShadow: '0 0 0 3px #1A2B4A' } : undefined} onClick={() => set('category', null)}>
+            ללא
+          </button>
+          {SLOTS.filter((s) => cats.names[s.key].trim()).map((s) => {
+            const on = value.category === s.key
+            return (
+              <button
+                key={s.key}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                className="btn !min-h-10 !px-4"
+                style={{ background: s.color, color: s.fg, fontWeight: on ? 600 : 400, boxShadow: on ? '0 0 0 3px #fff, 0 0 0 6px #1A2B4A' : undefined }}
+                onClick={() => set('category', s.key)}
+              >
+                {cats.names[s.key]}
+              </button>
+            )
+          })}
+        </div>
+        <p className="mt-2 text-sm text-mute">
+          {value.category ? `נבחר: ${cats.names[value.category as keyof typeof cats.names] || slotOf(value.category)?.label}` : 'לא נבחרה קטגוריה. שמות אפשר להוסיף במקרא שמתחת ללוח.'}
+        </p>
+      </div>
       <div>
         <label className="label" htmlFor="f-loc">מיקום</label>
         <input id="f-loc" className="field" value={value.location ?? ''} onChange={(e) => set('location', e.target.value || null)} />

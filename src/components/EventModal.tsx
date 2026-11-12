@@ -6,6 +6,7 @@ import Modal from './Modal'
 import { useApp } from '../lib/ctx'
 import { formatLong, formatTime, relativeDays } from '../lib/dateUtils'
 import { getSourceUrl } from '../lib/store'
+import { slotOf } from '../lib/categories'
 
 // פרטי אירוע מלאים: צפייה, עריכה ומחיקה. משמש גם בחלון וגם בעמוד האירוע
 export function EventBody({ event, onDone, inPage }: { event: CalEvent; onDone: () => void; inPage?: boolean }) {
@@ -68,6 +69,7 @@ export function EventBody({ event, onDone, inPage }: { event: CalEvent; onDone: 
       <h2 className="mt-1 text-3xl font-light leading-tight">{event.title}</h2>
       <dl className="mt-6 grid gap-4">
         <Row k="מתי" v={`${formatLong(event.event_date)}${event.event_time ? `, בשעה ${formatTime(event.event_time)}` : ''}`} />
+        {slotOf(event.category) && <Row k="קטגוריה" v={app.cats.names[slotOf(event.category)!.key] || slotOf(event.category)!.label} />}
         {event.location && <Row k="איפה" v={event.location} />}
         {event.people.length > 0 && <Row k="עם מי" v={event.people.join(', ')} />}
         {event.description && <Row k="פרטים" v={event.description} />}

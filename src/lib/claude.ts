@@ -2,6 +2,7 @@ import { supabase } from './supabase'
 import { api, ApiError } from './api'
 import type { EventDraft } from '../types'
 import { emptyDraft } from '../types'
+import { SLOTS, type CatNames } from './categories'
 
 // חילוץ פרטי אירוע ממסמך. המפתח של Claude נשמר רק בשרת (Edge Function yoman-api),
 // כדי שלא ייחשף בדפדפן
@@ -26,7 +27,7 @@ function toBase64(file: File): Promise<string> {
   })
 }
 
-export async function extractEvent(input: ExtractInput): Promise<EventDraft> {
+export async function extractEvent(input: ExtractInput, names?: CatNames): Promise<EventDraft> {
   let text = input.text
   const file = input.file
 
@@ -42,10 +43,12 @@ export async function extractEvent(input: ExtractInput): Promise<EventDraft> {
     return { ...localParse(text ?? ''), raw_source: (text ?? '').slice(0, 4000) }
   }
 
-  const body = text ? { text: text.slice(0, 30000) } : { mime: file!.type, data: await toBase64(file!) }
-  let d: Partial<EventDraft> & { raw_source?: string }
+  // השרת מציע קטגוריה מתוך השמות הקיימים
+  const categories = names ? SLOTS.map((s) => names[s.key].trim()).filter(Boolean) : []
+  const body = text ? { text: text.slice(0, 30000), categories } : { mime: file!.type, data: await toBase64(file!), categories }
+  let d: Partial<EventDraft> & { raw_source?: string; category_name?: string | null }
   try {
-    d = await api<Partial<EventDraft> & { raw_source?: string }>('extract', body)
+    d = await api<Partial<EventDraft> & { raw_source?: string; category_name?: string | null }>('extract', body)
   } catch (e) {
     if (e instanceof ApiError && e.code === 'no_anthropic_key') throw new Error('חסר מפתח Claude בשרת, ולכן אי אפשר לחלץ אוטומטית. אפשר למלא ידנית.')
     throw new Error('החילוץ נכשל. אפשר לנסות שוב או למלא ידנית.')
@@ -59,6 +62,7 @@ export async function extractEvent(input: ExtractInput): Promise<EventDraft> {
     people: Array.isArray(d.people) ? d.people : [],
     description: d.description ?? null,
     raw_source: d.raw_source ?? text?.slice(0, 4000) ?? null,
+    category: names ? SLOTS.find((s) => names[s.key].trim() && names[s.key].trim() === d.category_name?.trim())?.key ?? null : null,
   }
 }
 
