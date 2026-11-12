@@ -72,7 +72,7 @@ export default function App() {
           pickFile: () => fileInput.current?.click(),
           openPaste: () => setPaste('text'),
           openVoice: () => setPaste('voice'),
-          newManual: (date?: string) => up.manual(date),
+          newManual: (date?: string, time?: string) => up.manual(date, time),
           fromFile: up.fromFile,
           signOut: access.leave,
           account: demoMode ? null : 'מפתח אישי',

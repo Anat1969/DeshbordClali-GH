@@ -33,8 +33,8 @@ export function useUpload(names: CatNames) {
   }
 
   // אירוע ידני, אפשר עם תאריך שנבחר מראש (לחיצה כפולה על יום בלוח)
-  const manual = (date?: string) => {
-    setDraft({ ...emptyDraft(), event_date: date ?? null })
+  const manual = (date?: string, time?: string) => {
+    setDraft({ ...emptyDraft(), event_date: date ?? null, event_time: time ?? null })
     setStage('review')
   }
 

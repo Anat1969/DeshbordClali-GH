@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { CalEvent } from '../types'
 import CategoryLegend from './CategoryLegend'
+import TimeGrid from './TimeGrid'
 import Icon, { IconButton } from './Icon'
 import type { MilestoneMark } from '../lib/projects'
 import { SLOTS, slotOf, tint } from '../lib/categories'
@@ -19,7 +20,7 @@ interface Props {
   milestones: Map<string, MilestoneMark[]>
   onMode: (m: ViewMode) => void
   onSelect: (iso: string) => void
-  onAdd: (iso: string) => void
+  onAdd: (iso: string, time?: string) => void
   onPrev: () => void
   onNext: () => void
   onToday: () => void
@@ -194,7 +195,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
       <div role="grid" className="flex min-h-0 flex-1 flex-col">
         {/* ימי השבוע: גדולים ובולטים, היום האמצעי מסומן, ושישי ושבת באפור */}
         {mode !== 'day' && (
-          <div role="row" className={`grid-cols-7 pb-1.5 text-center ${mode === 'week' ? 'hidden sm:grid' : 'grid'}`}>
+          <div role="row" className={`grid-cols-7 pb-1.5 text-center ${mode === 'week' ? 'hidden' : 'grid'}`}>
             {heads.map((dow, i) => (
               <div key={i} role="columnheader" className={`text-lg font-semibold sm:text-xl ${dow === todayDow ? 'text-ink' : dow === 5 || dow === 6 ? 'text-mute' : 'text-ink'}`}>
                 <span className="sm:hidden">{HE_DAYS_SHORT[dow]}</span>
@@ -205,13 +206,20 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
           </div>
         )}
 
+        {/* מחשב: רשת שעות ליום ולשבוע */}
+        {(mode === 'day' || mode === 'week') && (
+          <div className="hidden min-h-0 flex-1 sm:flex">
+            <TimeGrid days={days} events={events} milestones={milestones} selected={selected} nextId={nextId} flashId={flashId} onSelect={onSelect} onAdd={onAdd} onOpenEvent={onOpenEvent} />
+          </div>
+        )}
+
         {mode === 'day' && (
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-1.5 overflow-auto sm:grid-cols-[1fr_1.5fr_1fr] sm:grid-rows-1">{days.map(cell)}</div>
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-1.5 overflow-auto sm:hidden">{days.map(cell)}</div>
         )}
 
         {/* שבוע: מסגרת אחת סביב כל השבוע, ומסגרת לכל יום */}
         {mode === 'week' && (
-          <div className="min-h-0 flex-1 overflow-auto rounded-lg p-1.5" style={{ border: `2px solid ${WEEK_FRAME}` }}>
+          <div className="min-h-0 flex-1 overflow-auto rounded-lg p-1.5 sm:hidden" style={{ border: `2px solid ${WEEK_FRAME}` }}>
             <div className="grid h-full grid-cols-1 gap-1.5 sm:grid-cols-7 sm:grid-rows-1">{days.map(cell)}</div>
           </div>
         )}

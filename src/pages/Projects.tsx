@@ -3,6 +3,7 @@ import Icon, { IconButton } from '../components/Icon'
 import { useApp } from '../lib/ctx'
 import { STATUS_LABEL, type Milestone, type Project, type ProjectStatus } from '../lib/projects'
 import { daysUntil, todayIso } from '../lib/dateUtils'
+import { getContacts, gmailUrl, type Contact } from '../lib/work'
 
 type Filter = 'all' | 'live' | 'waiting' | 'done'
 const FILTERS: [Filter, string][] = [['all', 'הכול'], ['live', 'פעילים'], ['waiting', 'ממתינים'], ['done', 'הושלמו']]
@@ -90,6 +91,13 @@ function ProjectCard({ p, onPatch, onRemove }: { p: Project; onPatch: (id: strin
   const [confirmDel, setConfirmDel] = useState(false)
   // אבני דרך: שורות בעריכה נשמרות רק כשיש להן גם שם וגם תאריך
   const [ms, setMs] = useState<Milestone[]>(p.milestones)
+  // איש קשר של הפרויקט ומייל ישיר מהכרטיס
+  const [cName, setCName] = useState(p.contact_name ?? '')
+  const [cMail, setCMail] = useState(p.contact_email ?? '')
+  const [contacts, setContacts] = useState<Contact[]>([])
+  const [mailOpen, setMailOpen] = useState(false)
+  const [subject, setSubject] = useState('')
+  const [body, setBody] = useState('')
   const due = dueInfo(p)
   const stale = p.status !== 'done' && daysSince(p.updated_at) >= 7
 
@@ -99,13 +107,32 @@ function ProjectCard({ p, onPatch, onRemove }: { p: Project; onPatch: (id: strin
     return () => window.clearTimeout(t)
   }, [confirmDel])
 
+  useEffect(() => { getContacts().then(setContacts).catch(() => { /* אין אנשי קשר */ }) }, [])
+  const mailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cMail.trim())
+  const pickContact = (v: string) => {
+    setCName(v)
+    const c = contacts.find((x) => x.name === v)
+    if (c?.email) { setCMail(c.email); save({ contact_name: c.name, contact_email: c.email }) }
+  }
+  // טיוטה אוטומטית: סטטוס, הצעד הבא ואבני דרך קרובות
+  const openMail = () => {
+    const upcoming = ms.filter((m) => !m.done && m.date >= todayIso()).sort((a, b) => (a.date < b.date ? -1 : 1)).slice(0, 3)
+    const lines = [`שלום ${cName.trim() || ''},`.replace(' ,', ','), '', `עדכון לגבי ${p.name}:`, `סטטוס: ${STATUS_LABEL[p.status]}, התקדמות ${p.progress}%.`]
+    if (p.next_step) lines.push(`הצעד הבא: ${p.next_step}.`)
+    if (p.due_date) lines.push(`מועד יעד: ${p.due_date.split('-').reverse().join('.')}.`)
+    for (const m of upcoming) lines.push(`${m.name}: ${m.date.split('-').reverse().join('.')}`)
+    lines.push('', 'ענת')
+    setSubject(`עדכון: ${p.name}`)
+    setBody(lines.join('\n'))
+    setMailOpen(true)
+  }
   const save = (x: Partial<Project>) => onPatch(p.id, x).catch(() => app.toast('השמירה נכשלה, השינוי בוטל'))
   const commitMs = (next: Milestone[]) => {
     setMs(next)
     save({ milestones: next.filter((m) => m.name.trim() && m.date) })
   }
   const editMs = (id: string, x: Partial<Milestone>) => setMs((l) => l.map((m) => (m.id === id ? { ...m, ...x } : m)))
-  const commitText = (field: 'name' | 'next_step' | 'note', value: string, cur: string | null) => {
+  const commitText = (field: 'name' | 'next_step' | 'note' | 'contact_name' | 'contact_email', value: string, cur: string | null) => {
     if (value.trim() !== (cur ?? '').trim()) save({ [field]: value.trim() || null } as Partial<Project>)
   }
 
@@ -161,6 +188,25 @@ function ProjectCard({ p, onPatch, onRemove }: { p: Project; onPatch: (id: strin
         <label className="label" htmlFor={`nx-${p.id}`}>הצעד הבא</label>
         <input id={`nx-${p.id}`} className="field" value={next} placeholder="מה הדבר הבא שצריך לקרות" onChange={(e) => setNext(e.target.value)} onBlur={() => commitText('next_step', next, p.next_step)} />
       </div>
+      <div className="mt-3 rounded-lg bg-soft/70 p-3">
+        <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><Icon name="mail" size={14} />איש קשר בפרויקט</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <input className="field !min-h-9 !py-1 text-sm" list={`ct-${p.id}`} placeholder="שם" aria-label="שם איש הקשר" value={cName} onChange={(e) => pickContact(e.target.value)} onBlur={() => commitText('contact_name', cName, p.contact_name)} />
+          <datalist id={`ct-${p.id}`}>{contacts.map((c) => <option key={c.email || c.name} value={c.name} />)}</datalist>
+          <input className="field num !min-h-9 !py-1 text-sm" dir="ltr" type="email" placeholder="מייל" aria-label="מייל איש הקשר" value={cMail} onChange={(e) => setCMail(e.target.value)} onBlur={() => mailOk || !cMail.trim() ? commitText('contact_email', cMail.trim(), p.contact_email) : app.toast('כתובת המייל לא תקינה')} />
+        </div>
+        <button type="button" className="btn mt-2 !min-h-9 gap-1.5 text-sm" disabled={!mailOk} onClick={() => (mailOpen ? setMailOpen(false) : openMail())}>
+          <Icon name="send" size={14} />{mailOpen ? 'סגירת המייל' : 'שליחת מייל'}
+        </button>
+        {mailOpen && (
+          <div className="mt-2 grid gap-2">
+            <input className="field !min-h-9 !py-1 text-sm" aria-label="נושא" value={subject} onChange={(e) => setSubject(e.target.value)} />
+            <textarea className="field resize-y text-sm" rows={7} aria-label="גוף המייל" value={body} onChange={(e) => setBody(e.target.value)} />
+            <a className="btn btn-primary !min-h-9 gap-1.5 text-sm" href={gmailUrl(cMail.trim(), subject, body)} target="_blank" rel="noreferrer"><Icon name="mail" size={14} />פתיחה ב-Gmail לשליחה</a>
+          </div>
+        )}
+      </div>
+
       <div className="mt-3">
         <label className="label" htmlFor={`no-${p.id}`}>הערה</label>
         <textarea id={`no-${p.id}`} rows={2} className="field resize-y" value={note} onChange={(e) => setNote(e.target.value)} onBlur={() => commitText('note', note, p.note)} />

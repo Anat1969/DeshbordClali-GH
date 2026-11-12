@@ -108,7 +108,7 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
               flashId={flashId}
               nextId={next?.id ?? null}
               milestones={milestones}
-              onAdd={(iso) => (setSelected(iso), app.newManual(iso))}
+              onAdd={(iso, time) => (setSelected(iso), app.newManual(iso, time))}
               onMode={setMode}
               onSelect={setSelected}
               onPrev={() => go(-1)}
