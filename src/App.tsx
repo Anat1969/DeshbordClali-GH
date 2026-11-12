@@ -17,6 +17,7 @@ import { useUpload } from './hooks/useUpload'
 import { useCategories } from './hooks/useCategories'
 import { useQuickLinks } from './hooks/useQuickLinks'
 import Work from './pages/Work'
+import Projects from './pages/Projects'
 import { demoMode } from './lib/supabase'
 
 export default function App() {
@@ -83,6 +84,7 @@ export default function App() {
               <Route path="/" element={seenToday() ? <Home uploading={up.stage === 'working'} step={up.step} /> : <Navigate to="/welcome" replace />} />
               <Route path="/welcome" element={<Welcome />} />
               <Route path="/work" element={<Work />} />
+              <Route path="/projects" element={<Projects />} />
               <Route path="/event/:id" element={<EventDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<p className="p-8">הדף לא נמצא. אפשר לחזור ליומן דרך שם האפליקציה למעלה.</p>} />

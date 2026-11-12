@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import CalendarMonthView from '../components/CalendarMonthView'
 import EventCard from '../components/EventCard'
 import EventModal from '../components/EventModal'
 import UploadZone from '../components/UploadZone'
 import Icon, { IconButton } from '../components/Icon'
 import QuickLinks from '../components/QuickLinks'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useApp } from '../lib/ctx'
 import TaskList from '../components/TaskList'
 import { VIEW_STEP, addDays, daysUntil, formatLong, formatShort, formatTime, relativeDays, todayIso, type ViewMode } from '../lib/dateUtils'
@@ -31,6 +31,13 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
   }
   const [selected, setSelected] = useState(todayIso())
   const [open, setOpen] = useState<CalEvent | null>(null)
+
+  // לחיצה על הלוגו (גם כשכבר בדף הבית) מחזירה להיום
+  const loc = useLocation()
+  useEffect(() => {
+    setAnchor(todayIso())
+    setSelected(todayIso())
+  }, [loc.key])
 
   const next = useMemo(() => events.find((e) => daysUntil(e.event_date) >= 0), [events])
   const day = events.filter((e) => e.event_date === selected)

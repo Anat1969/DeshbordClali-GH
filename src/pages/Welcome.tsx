@@ -1,11 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Icon, { type IconName } from '../components/Icon'
+import MorningBrief from '../components/MorningBrief'
 import QuickLinks from '../components/QuickLinks'
 import { useApp } from '../lib/ctx'
 import { useTasks } from '../hooks/useTasks'
-import { dayKey, getInspiration, markSeen, type InspireCard } from '../lib/inspire'
-import { addDays, formatLong, formatShort, formatTime, todayIso } from '../lib/dateUtils'
+import { useProjects } from '../hooks/useProjects'
+import { buildBrief } from '../lib/brief'
+import { getInspiration, markSeen, type InspireCard } from '../lib/inspire'
+import { formatLong, formatShort, todayIso } from '../lib/dateUtils'
 
 // צבע ואייקון לכל סוג כרטיס
 const KIND: Record<InspireCard['kind'], { icon: IconName; ink: string; bar: string }> = {
@@ -27,123 +30,75 @@ const ROWS: { kinds: InspireCard['kind'][]; grid: string }[] = [
   { kinds: ['song', 'word'], grid: 'sm:grid-cols-2' },
 ]
 
-function greeting(): string {
-  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', hour: '2-digit', hour12: false }).format(new Date()))
-  return h < 5 ? 'לילה טוב' : h < 12 ? 'בוקר טוב' : h < 18 ? 'צהריים טובים' : 'ערב טוב'
-}
-
 // דף פתיחה: מה היום, מה מחר (כדי להתכונן), משימות פתוחות ומה בוצע אתמול, והשראה מהאפליקציות
 export default function Welcome() {
   const app = useApp()
-  const { tasks, loading: tasksLoading } = useTasks()
+  const { tasks } = useTasks()
+  const { projects } = useProjects()
   const [cards, setCards] = useState<InspireCard[] | null>(null)
   const [failed, setFailed] = useState(false)
   const today = todayIso()
-  const tomorrow = addDays(today, 1)
-  const yesterday = addDays(today, -1)
-  const ev = app.ev.events
-  const todays = ev.filter((e) => e.event_date === today)
-  const tomorrows = ev.filter((e) => e.event_date === tomorrow)
-  const open = tasks.filter((t) => !t.done)
-  const doneYesterday = tasks.filter((t) => t.done && t.done_at && dayKey(t.done_at) === yesterday)
+  const ready = !app.ev.loading
 
   useEffect(() => {
     markSeen()
     getInspiration().then(setCards).catch(() => setFailed(true))
   }, [])
 
+  // תדרוך הבוקר מחושב מהאירועים, המשימות והפרויקטים
+  const brief = useMemo(() => buildBrief({ events: app.ev.events, tasks, projects, today, name: 'ענת' }), [app.ev.events, tasks, projects, today])
+  const dateLine = `${formatShort(today).split(',')[0]} · ${formatLong(today).replace(/^[^,]+, /, '')}`
+
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="flex items-center gap-2 text-mute">
-            <Icon name="sun" size={18} />
-            {formatLong(today)}
-          </p>
-          <h1 className="mt-1 text-4xl font-light sm:text-5xl">{greeting()}, <b>ענת</b></h1>
-        </div>
-        <Link to="/" className="btn btn-primary min-h-12 px-6 text-lg">
-          כניסה ליומן
-          <Icon name="chevronL" size={20} />
-        </Link>
-      </header>
-
-      <div className="mt-5"><QuickLinks /></div>
-
-      {/* ארבעה בלוקים בשורה: היום, מחר, פתוחות, בוצעו אתמול */}
-      <section className="mt-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="סיכום יומי">
-        <Block icon="calendar" title="היום ביומן" count={todays.length} loading={app.ev.loading} empty="אין אירועים היום. יום פנוי.">
-          {todays.map((e) => <EventLine key={e.id} time={formatTime(e.event_time)} title={e.title} place={e.location} />)}
-        </Block>
-        <Block icon="clock" title={`מחר: להתכונן`} sub={formatShort(tomorrow)} count={tomorrows.length} loading={app.ev.loading} empty="אין אירועים מחר.">
-          {tomorrows.map((e) => <EventLine key={e.id} time={formatTime(e.event_time)} title={e.title} place={e.location} />)}
-        </Block>
-        <Block icon="check" title="משימות פתוחות" count={open.length} loading={tasksLoading} empty="אין משימות פתוחות.">
-          {open.slice(0, 6).map((t) => <li key={t.id} className="break-words font-semibold text-[#111111]">{t.text}</li>)}
-          {open.length > 6 && <li className="text-sm text-mute">ועוד {open.length - 6} משימות ביומן</li>}
-        </Block>
-        <Block icon="check" title="בוצעו אתמול" count={doneYesterday.length} loading={tasksLoading} empty="לא סומנו משימות אתמול.">
-          {doneYesterday.map((t) => <li key={t.id} className="break-words text-mute line-through decoration-2">{t.text}</li>)}
-        </Block>
-      </section>
-
-      <h2 className="mb-4 mt-10 text-2xl font-light">השראה להיום <span className="text-base text-mute">מהאפליקציות שלך</span></h2>
-
-      {failed && <p className="rounded-lg bg-[#FBECEA] p-3 text-bad" role="alert">ההשראה לא נטענה כרגע. אפשר להמשיך ליומן.</p>}
-      {!cards && !failed && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
-          {Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton h-44" />)}
-        </div>
+    <div className="w-full">
+      {ready ? (
+        <MorningBrief brief={brief} dateLine={dateLine}>
+          <Link to="/" className="btn btn-primary shrink-0">
+            כניסה ליומן
+            <Icon name="chevronL" size={18} />
+          </Link>
+        </MorningBrief>
+      ) : (
+        <div className="mx-auto max-w-[860px] px-4 py-10"><div className="skeleton h-64" aria-busy="true" /></div>
       )}
 
-      <div className="grid gap-4">
-        {cards && ROWS.map((row, i) => {
-          const list = row.kinds.flatMap((k) => cards.filter((c) => c.kind === k))
-          return list.length > 0 && (
-            <div key={i} className={`grid items-stretch gap-4 ${row.grid}`}>
-              {list.map((c) => <Card key={c.id} card={c} big={c.kind === 'power'} />)}
-            </div>
-          )
-        })}
-      </div>
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <QuickLinks />
+          <Link to="/projects" className="btn gap-2 text-navy"><Icon name="chart" size={18} />מעקב פרויקטים</Link>
+        </div>
 
-      <div className="mt-10 text-center">
-        <Link to="/" className="btn btn-primary min-h-12 px-8 text-lg">
-          כניסה ליומן
-          <Icon name="chevronL" size={20} />
-        </Link>
+        <h2 className="mb-4 mt-10 text-2xl font-light">השראה להיום <span className="text-base text-mute">מהאפליקציות שלך</span></h2>
+
+        {failed && <p className="rounded-lg bg-[#FBECEA] p-3 text-bad" role="alert">ההשראה לא נטענה כרגע. אפשר להמשיך ליומן.</p>}
+        {!cards && !failed && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+            {Array.from({ length: 6 }, (_, i) => <div key={i} className="skeleton h-44" />)}
+          </div>
+        )}
+
+        <div className="grid gap-4">
+          {cards && ROWS.map((row, i) => {
+            const list = row.kinds.flatMap((k) => cards.filter((c) => c.kind === k))
+            return list.length > 0 && (
+              <div key={i} className={`grid items-stretch gap-4 ${row.grid}`}>
+                {list.map((c) => <Card key={c.id} card={c} big={c.kind === 'power'} />)}
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="mt-10 text-center">
+          <Link to="/" className="btn btn-primary min-h-12 px-8 text-lg">
+            כניסה ליומן
+            <Icon name="chevronL" size={20} />
+          </Link>
+        </div>
       </div>
     </div>
   )
 }
 
-function Block({ icon, title, sub, count, loading, empty, children }: { icon: IconName; title: string; sub?: string; count: number; loading: boolean; empty: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col rounded-lg bg-soft/70 p-4">
-      <h3 className="flex items-center gap-2 text-base font-semibold">
-        <Icon name={icon} size={18} />
-        <span className="flex-1">{title}</span>
-        <span className="num rounded-md bg-white px-2 text-sm">{loading ? '...' : count}</span>
-      </h3>
-      {sub && <p className="text-sm text-mute">{sub}</p>}
-      {loading ? <div className="skeleton mt-3 h-6" /> : count === 0 ? <p className="mt-3 text-mute">{empty}</p> : <ul className="m-0 mt-3 grid list-none gap-2 p-0">{children}</ul>}
-    </div>
-  )
-}
-
-function EventLine({ time, title, place }: { time: string; title: string; place: string | null }) {
-  return (
-    <li className="flex items-start gap-3">
-      <span className="num w-12 shrink-0 font-semibold">{time || '--:--'}</span>
-      <span className="min-w-0">
-        <span className="block break-words font-semibold text-[#111111]">{title}</span>
-        {place && <span className="block break-words text-sm text-mute">{place}</span>}
-      </span>
-    </li>
-  )
-}
-
-// אייקון האפליקציה: תמונת השער שלה. אם לא נטענת, האות הראשונה
 function AppIcon({ cover, name }: { cover: string | null; name: string }) {
   const [broken, setBroken] = useState(false)
   return cover && !broken ? (
