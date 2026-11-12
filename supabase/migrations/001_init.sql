@@ -1,10 +1,9 @@
--- יומן חכם: סכמה ראשונית
+-- יומן חכם (YOMAN): סכמה ראשונית. קידומת yoman_ כי הפרויקט CULTURA-GH משותף לאפליקציות רבות
 
-create extension if not exists "uuid-ossp";
 
 -- אירועים
-create table events (
-  id uuid primary key default uuid_generate_v4(),
+create table yoman_events (
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
   title text not null,
   event_date date not null,
@@ -20,29 +19,29 @@ create table events (
   updated_at timestamptz not null default now()
 );
 
-create index on events(user_id, event_date);
-create index on events(event_date, reminder_sent);
+create index on yoman_events(user_id, event_date);
+create index on yoman_events(event_date, reminder_sent);
 
-alter table events enable row level security;
-create policy "users manage own events" on events
+alter table yoman_events enable row level security;
+create policy "yoman own events" on yoman_events
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- פרופיל: מספר הווצאפ לתזכורות (בנפרד מ-auth.users, שאי אפשר לשלוף ממנו דרך ה-API)
-create table profiles (
+create table yoman_profiles (
   user_id uuid primary key default auth.uid() references auth.users(id) on delete cascade,
   whatsapp_number text not null default ''
 );
-alter table profiles enable row level security;
-create policy "users manage own profile" on profiles
+alter table yoman_profiles enable row level security;
+create policy "yoman own profile" on yoman_profiles
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- אחסון מסמכים: bucket פרטי, כל משתמשת רואה רק את התיקייה שלה
-insert into storage.buckets (id, name, public) values ('documents', 'documents', false)
+insert into storage.buckets (id, name, public) values ('yoman-documents', 'yoman-documents', false)
   on conflict (id) do nothing;
 
-create policy "own documents read" on storage.objects for select
-  using (bucket_id = 'documents' and (storage.foldername(name))[1] = auth.uid()::text);
-create policy "own documents write" on storage.objects for insert
-  with check (bucket_id = 'documents' and (storage.foldername(name))[1] = auth.uid()::text);
-create policy "own documents delete" on storage.objects for delete
-  using (bucket_id = 'documents' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "yoman documents read" on storage.objects for select
+  using (bucket_id = 'yoman-documents' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "yoman documents write" on storage.objects for insert
+  with check (bucket_id = 'yoman-documents' and (storage.foldername(name))[1] = auth.uid()::text);
+create policy "yoman documents delete" on storage.objects for delete
+  using (bucket_id = 'yoman-documents' and (storage.foldername(name))[1] = auth.uid()::text);
