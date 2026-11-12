@@ -208,14 +208,11 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
 
         {/* מחשב: רשת שעות ליום ולשבוע */}
         {(mode === 'day' || mode === 'week') && (
-          <div className="hidden min-h-0 flex-1 sm:flex">
-            <TimeGrid days={days} events={events} milestones={milestones} selected={selected} nextId={nextId} flashId={flashId} onSelect={onSelect} onAdd={onAdd} onOpenEvent={onOpenEvent} />
+          <div className={`min-h-0 flex-1 ${mode === 'day' ? 'flex' : 'hidden sm:flex'}`}>
+            <TimeGrid single={mode === 'day'} days={days} events={events} milestones={milestones} selected={selected} nextId={nextId} flashId={flashId} onSelect={onSelect} onAdd={onAdd} onOpenEvent={onOpenEvent} />
           </div>
         )}
 
-        {mode === 'day' && (
-          <div className="grid min-h-0 flex-1 grid-cols-1 gap-1.5 overflow-auto sm:hidden">{days.map(cell)}</div>
-        )}
 
         {/* שבוע: מסגרת אחת סביב כל השבוע, ומסגרת לכל יום */}
         {mode === 'week' && (
