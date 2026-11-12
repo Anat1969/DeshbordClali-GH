@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import Icon from './Icon'
+import Icon, { IconButton } from './Icon'
 import { SLOTS } from '../lib/categories'
 import { useApp } from '../lib/ctx'
 
@@ -15,10 +15,7 @@ export default function CategoryLegend() {
           {edit && cats.save === 'saving' && <span className="text-sm text-mute">שומר...</span>}
           {edit && cats.save === 'saved' && <span className="text-sm text-good">נשמר</span>}
           {edit && cats.save === 'error' && <span className="text-sm text-bad">השמירה נכשלה</span>}
-          <button type="button" className="btn !min-h-9 gap-1.5 !px-3 text-sm" onClick={() => setEdit((e) => !e)}>
-            <Icon name={edit ? 'check' : 'pencil'} size={14} />
-            {edit ? 'סיום עריכה' : 'עריכת קטגוריות'}
-          </button>
+          <IconButton name={edit ? 'check' : 'pencil'} label={edit ? 'סיום עריכת קטגוריות' : 'עריכת קטגוריות'} size={16} className="!h-8 !w-8" onClick={() => setEdit((e) => !e)} />
         </div>
       </div>
       <ul className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0">

@@ -23,12 +23,20 @@ function dueInfo(p: Project): { text: string; tone: 'bad' | 'warn' | 'ok' } | nu
   return { text: `בעוד ${d} ימים`, tone: 'ok' }
 }
 
+const CK = 'sc_proj_collapsed_v1'
+const readCollapsed = (): Record<string, boolean> => { try { return JSON.parse(localStorage.getItem(CK) ?? '{}') } catch { return {} } }
+const fmt = (iso: string) => iso.split('-').reverse().join('.')
+
 // מעקב פרויקטים: סטטוס, התקדמות, מועד, הצעד הבא והערה. נשמר אוטומטית
 export default function Projects() {
   const app = useApp()
   const { projects, loading, error, reload, add, patch, remove } = app.projects
   const [name, setName] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(readCollapsed)
+  // ברירת מחדל: פרויקט שהושלם או ממתין מכווץ, ואפשר לפתוח ולסגור כל פרויקט
+  const isClosed = (p: Project) => collapsed[p.id] ?? (p.status === 'done' || p.status === 'waiting')
+  const setClosed = (ids: string[], v: boolean) => setCollapsed((c) => { const n = { ...c }; ids.forEach((i) => (n[i] = v)); try { localStorage.setItem(CK, JSON.stringify(n)) } catch { /* אחסון חסום */ } return n })
 
   const sorted = useMemo(() => {
     const list = projects.filter((p) => (filter === 'all' ? true : filter === 'live' ? p.status === 'active' || p.status === 'planning' : filter === 'waiting' ? p.status === 'waiting' : p.status === 'done'))
@@ -64,7 +72,11 @@ export default function Projects() {
         <IconButton name="plus" label="הוספת פרויקט" tone="primary" size={22} className="!h-11 !w-11" disabled={!name.trim()} onClick={submit} />
       </div>
 
-      <div className="mt-4 grid grid-cols-4 gap-2" role="group" aria-label="סינון פרויקטים">
+      <div className="mt-4 flex justify-end gap-2">
+        <button type="button" className="btn !min-h-9 gap-1.5 text-sm" onClick={() => setClosed(sorted.map((p) => p.id), true)}><Icon name="chevronU" size={14} />כיווץ הכול</button>
+        <button type="button" className="btn !min-h-9 gap-1.5 text-sm" onClick={() => setClosed(sorted.map((p) => p.id), false)}><Icon name="chevronD" size={14} />פתיחת הכול</button>
+      </div>
+      <div className="mt-3 grid grid-cols-4 gap-2" role="group" aria-label="סינון פרויקטים">
         {FILTERS.map(([k, label]) => (
           <button key={k} type="button" aria-pressed={filter === k} onClick={() => setFilter(k)} className={`btn !min-h-9 text-sm ${filter === k ? 'btn-primary' : ''}`}>{label}</button>
         ))}
@@ -77,13 +89,13 @@ export default function Projects() {
         {!loading && sorted.length === 0 && (
           <li className="rounded-lg bg-soft p-4 text-mute">{projects.length === 0 ? 'אין פרויקטים עדיין. הוסיפי את הראשון למעלה.' : 'אין פרויקטים בסינון הזה.'}</li>
         )}
-        {sorted.map((p) => <ProjectCard key={p.id} p={p} onPatch={patch} onRemove={remove} />)}
+        {sorted.map((p, i) => <ProjectCard key={p.id} n={i + 1} p={p} closed={isClosed(p)} onToggle={() => setClosed([p.id], !isClosed(p))} onPatch={patch} onRemove={remove} />)}
       </ul>
     </div>
   )
 }
 
-function ProjectCard({ p, onPatch, onRemove }: { p: Project; onPatch: (id: string, x: Partial<Project>) => Promise<void>; onRemove: (id: string) => Promise<void> }) {
+function ProjectCard({ n, p, closed, onToggle, onPatch, onRemove }: { n: number; closed: boolean; onToggle: () => void; p: Project; onPatch: (id: string, x: Partial<Project>) => Promise<void>; onRemove: (id: string) => Promise<void> }) {
   const app = useApp()
   const [name, setName] = useState(p.name)
   const [next, setNext] = useState(p.next_step ?? '')
@@ -136,86 +148,111 @@ function ProjectCard({ p, onPatch, onRemove }: { p: Project; onPatch: (id: strin
     if (value.trim() !== (cur ?? '').trim()) save({ [field]: value.trim() || null } as Partial<Project>)
   }
 
+  const sortedMs = [...ms].sort((a, b) => (a.date < b.date ? -1 : 1))
+  const nextMs = sortedMs.find((m) => !m.done && m.date >= todayIso())
+
   return (
     <li className="rounded-lg bg-white p-4 shadow-btn" style={{ borderTop: `4px solid ${STATUS_INK[p.status]}` }}>
+      {/* שם הפרויקט גדול, עם מספר סידורי לפי דחיפות. אפשר לכווץ ולפתוח */}
       <div className="flex items-start gap-3">
-        <input className="field !bg-transparent !px-0 text-xl font-semibold text-[#111111]" aria-label="שם הפרויקט" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() ? commitText('name', name, p.name) : setName(p.name)} />
+        <span className="num mt-1 shrink-0 text-2xl font-light text-mute" aria-label={`מספר ${n}`}>{n}.</span>
+        <input className="field !bg-transparent !px-0 !text-3xl !font-semibold !leading-tight text-[#111111]" aria-label="שם הפרויקט" value={name} onChange={(e) => setName(e.target.value)} onBlur={() => name.trim() ? commitText('name', name, p.name) : setName(p.name)} />
+        <IconButton name={closed ? 'chevronD' : 'chevronU'} label={closed ? 'פתיחת הפרויקט' : 'כיווץ הפרויקט'} size={18} className="!h-9 !w-9" onClick={onToggle} />
         <IconButton name="x" label={confirmDel ? 'לחצי שוב למחיקה' : 'מחיקת הפרויקט'} tone="danger" size={18} className={`!h-9 !w-9 ${confirmDel ? '!bg-bad !text-white' : ''}`} onClick={() => (confirmDel ? onRemove(p.id).catch(() => app.toast('המחיקה נכשלה')) : setConfirmDel(true))} />
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr]">
-        <div>
-          <label className="label" htmlFor={`st-${p.id}`}>סטטוס</label>
-          <select id={`st-${p.id}`} className="field" value={p.status} onChange={(e) => save({ status: e.target.value as ProjectStatus, ...(e.target.value === 'done' ? { progress: 100 } : {}) })}>
-            {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="label" htmlFor={`du-${p.id}`}>מועד יעד</label>
-          <input id={`du-${p.id}`} type="date" className="field num" value={p.due_date ?? ''} onChange={(e) => save({ due_date: e.target.value || null })} />
-          {due && <p className={`mt-1 text-sm font-semibold ${due.tone === 'bad' ? 'text-bad' : due.tone === 'warn' ? 'text-[#B85F0B]' : 'text-mute'}`}>{due.text}</p>}
-        </div>
-      </div>
-
-      <div className="mt-3">
-        <label className="label flex items-center justify-between" htmlFor={`pr-${p.id}`}>
-          <span>התקדמות</span>
-          <span className="num font-semibold text-[#111111]">{p.progress}%</span>
-        </label>
-        <input id={`pr-${p.id}`} type="range" min={0} max={100} step={5} value={p.progress} className="h-6 w-full cursor-pointer accent-[#1A2B4A]" onChange={(e) => save({ progress: Number(e.target.value) })} />
-      </div>
-
-      {/* אבני דרך: תאריכים שמופיעים ביומן בסימן מיוחד, כדי לראות מסגרת ותוכנית עבודה */}
-      <div className="mt-4 rounded-lg bg-soft/70 p-3">
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <p className="flex items-center gap-1.5 text-sm font-semibold"><Icon name="diamond" size={14} />אבני דרך <span className="font-normal text-mute">(מופיעות ביומן)</span></p>
-          <IconButton name="plus" label="הוספת אבן דרך" tone="primary" size={16} className="!h-8 !w-8" onClick={() => setMs((l) => [...l, { id: crypto.randomUUID(), name: '', date: p.due_date ?? todayIso(), done: false }])} />
-        </div>
-        {ms.length === 0 && <p className="text-sm text-mute">אין אבני דרך. הוסיפי תאריכים של שלבי העבודה.</p>}
-        <ul className="m-0 grid list-none gap-2 p-0">
-          {[...ms].sort((a, b) => (a.date < b.date ? -1 : 1)).map((m) => (
-            <li key={m.id} className="grid grid-cols-[auto_9.5rem_1fr_auto] items-center gap-2">
-              <input type="checkbox" className="h-5 w-5 cursor-pointer accent-[#1A2B4A]" aria-label={`בוצעה: ${m.name || 'אבן דרך'}`} checked={m.done} onChange={(e) => commitMs(ms.map((x) => (x.id === m.id ? { ...x, done: e.target.checked } : x)))} />
-              <input type="date" className="field num !min-h-9 !py-1 text-sm" aria-label="תאריך אבן הדרך" value={m.date} onChange={(e) => editMs(m.id, { date: e.target.value })} onBlur={() => commitMs(ms)} />
-              <input className={`field !min-h-9 !py-1 text-sm ${m.done ? 'text-mute line-through' : ''}`} placeholder="שם השלב" aria-label="שם אבן הדרך" value={m.name} onChange={(e) => editMs(m.id, { name: e.target.value })} onBlur={() => commitMs(ms)} />
-              <IconButton name="x" label="הסרת אבן הדרך" tone="danger" size={14} className="!h-8 !w-8" onClick={() => commitMs(ms.filter((x) => x.id !== m.id))} />
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="mt-3">
-        <label className="label" htmlFor={`nx-${p.id}`}>הצעד הבא</label>
-        <input id={`nx-${p.id}`} className="field" value={next} placeholder="מה הדבר הבא שצריך לקרות" onChange={(e) => setNext(e.target.value)} onBlur={() => commitText('next_step', next, p.next_step)} />
-      </div>
-      <div className="mt-3 rounded-lg bg-soft/70 p-3">
-        <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><Icon name="mail" size={14} />איש קשר בפרויקט</p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <input className="field !min-h-9 !py-1 text-sm" list={`ct-${p.id}`} placeholder="שם" aria-label="שם איש הקשר" value={cName} onChange={(e) => pickContact(e.target.value)} onBlur={() => commitText('contact_name', cName, p.contact_name)} />
-          <datalist id={`ct-${p.id}`}>{contacts.map((c) => <option key={c.email || c.name} value={c.name} />)}</datalist>
-          <input className="field num !min-h-9 !py-1 text-sm" dir="ltr" type="email" placeholder="מייל" aria-label="מייל איש הקשר" value={cMail} onChange={(e) => setCMail(e.target.value)} onBlur={() => mailOk || !cMail.trim() ? commitText('contact_email', cMail.trim(), p.contact_email) : app.toast('כתובת המייל לא תקינה')} />
-        </div>
-        <button type="button" className="btn mt-2 !min-h-9 gap-1.5 text-sm" disabled={!mailOk} onClick={() => (mailOpen ? setMailOpen(false) : openMail())}>
-          <Icon name="send" size={14} />{mailOpen ? 'סגירת המייל' : 'שליחת מייל'}
-        </button>
-        {mailOpen && (
-          <div className="mt-2 grid gap-2">
-            <input className="field !min-h-9 !py-1 text-sm" aria-label="נושא" value={subject} onChange={(e) => setSubject(e.target.value)} />
-            <textarea className="field resize-y text-sm" rows={7} aria-label="גוף המייל" value={body} onChange={(e) => setBody(e.target.value)} />
-            <a className="btn btn-primary !min-h-9 gap-1.5 text-sm" href={gmailUrl(cMail.trim(), subject, body)} target="_blank" rel="noreferrer"><Icon name="mail" size={14} />פתיחה ב-Gmail לשליחה</a>
-          </div>
-        )}
-      </div>
-
-      <div className="mt-3">
-        <label className="label" htmlFor={`no-${p.id}`}>הערה</label>
-        <textarea id={`no-${p.id}`} rows={2} className="field resize-y" value={note} onChange={(e) => setNote(e.target.value)} onBlur={() => commitText('note', note, p.note)} />
-      </div>
-
-      <p className={`mt-3 flex items-center gap-1.5 text-xs ${stale ? 'font-semibold text-[#B85F0B]' : 'text-mute'}`}>
-        <Icon name="clock" size={12} />
-        {stale ? `לא עודכן ${daysSince(p.updated_at)} ימים` : `עודכן ${daysSince(p.updated_at) === 0 ? 'היום' : `לפני ${daysSince(p.updated_at)} ימים`}`}
+      {/* שורת תקציר: תמיד גלויה, גם כשהפרויקט מכווץ */}
+      <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <span className="font-semibold" style={{ color: STATUS_INK[p.status] }}>{STATUS_LABEL[p.status]} · <span className="num">{p.progress}%</span></span>
+        {p.due_date && <span className="num text-mute">יעד {fmt(p.due_date)}</span>}
+        {due && <span className={`font-semibold ${due.tone === 'bad' ? 'text-bad' : due.tone === 'warn' ? 'text-[#B85F0B]' : 'text-mute'}`}>{due.text}</span>}
+        {p.contact_name && <span className="flex items-center gap-1"><Icon name="users" size={13} /><b>{p.contact_name}</b></span>}
       </p>
+      {closed && (
+        <p className="mt-2 text-base">
+          {p.next_step ? <><span className="text-mute">הצעד הבא: </span><b>{p.next_step}</b></> : <span className="text-mute">אין צעד הבא</span>}
+          {nextMs && <span className="num text-mute"> · {nextMs.name}, {fmt(nextMs.date)}</span>}
+        </p>
+      )}
+
+      {!closed && (<>
+        {/* 1. הצעד הבא: הדגש הראשי */}
+        <div className="mt-4 rounded-lg bg-[#E8ECF4] p-3">
+          <label className="mb-1 flex items-center gap-1.5 text-sm font-semibold" htmlFor={`nx-${p.id}`}><Icon name="target" size={14} />הצעד הבא</label>
+          <input id={`nx-${p.id}`} className="field !bg-white !text-lg font-semibold" value={next} placeholder="מה הדבר הבא שצריך לקרות" onChange={(e) => setNext(e.target.value)} onBlur={() => commitText('next_step', next, p.next_step)} />
+        </div>
+
+        {/* 2. איש קשר ומייל ישיר */}
+        <div className="mt-3 rounded-lg bg-soft/70 p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><Icon name="users" size={14} />איש קשר</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <input className="field !min-h-10 text-base font-semibold" list={`ct-${p.id}`} placeholder="שם" aria-label="שם איש הקשר" value={cName} onChange={(e) => pickContact(e.target.value)} onBlur={() => commitText('contact_name', cName, p.contact_name)} />
+            <datalist id={`ct-${p.id}`}>{contacts.map((c) => <option key={c.email || c.name} value={c.name} />)}</datalist>
+            <input className="field num !min-h-10 text-sm" dir="ltr" type="email" placeholder="מייל" aria-label="מייל איש הקשר" value={cMail} onChange={(e) => setCMail(e.target.value)} onBlur={() => mailOk || !cMail.trim() ? commitText('contact_email', cMail.trim(), p.contact_email) : app.toast('כתובת המייל לא תקינה')} />
+          </div>
+          <button type="button" className="btn mt-2 !min-h-9 gap-1.5 text-sm" disabled={!mailOk} onClick={() => (mailOpen ? setMailOpen(false) : openMail())}>
+            <Icon name="send" size={14} />{mailOpen ? 'סגירת המייל' : 'שליחת מייל'}
+          </button>
+          {mailOpen && (
+            <div className="mt-2 grid gap-2">
+              <input className="field !min-h-9 !py-1 text-sm" aria-label="נושא" value={subject} onChange={(e) => setSubject(e.target.value)} />
+              <textarea className="field resize-y text-sm" rows={7} aria-label="גוף המייל" value={body} onChange={(e) => setBody(e.target.value)} />
+              <a className="btn btn-primary !min-h-9 gap-1.5 text-sm" href={gmailUrl(cMail.trim(), subject, body)} target="_blank" rel="noreferrer"><Icon name="mail" size={14} />פתיחה ב-Gmail לשליחה</a>
+            </div>
+          )}
+        </div>
+
+        {/* 3. אבני דרך: ממוינות לפי תאריך וממוספרות, ומופיעות ביומן */}
+        <div className="mt-3 rounded-lg bg-soft/70 p-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-sm font-semibold"><Icon name="diamond" size={14} />אבני דרך <span className="font-normal text-mute">(מופיעות ביומן)</span></p>
+            <IconButton name="plus" label="הוספת אבן דרך" tone="primary" size={16} className="!h-8 !w-8" onClick={() => setMs((l) => [...l, { id: crypto.randomUUID(), name: '', date: p.due_date ?? todayIso(), done: false }])} />
+          </div>
+          {sortedMs.length === 0 && <p className="text-sm text-mute">אין אבני דרך. הוסיפי תאריכים של שלבי העבודה.</p>}
+          <ol className="m-0 grid list-none gap-2 p-0">
+            {sortedMs.map((m, idx) => (
+              <li key={m.id} className="grid grid-cols-[1.5rem_auto_9.5rem_1fr_auto] items-center gap-2">
+                <span className="num text-sm text-mute">{idx + 1}.</span>
+                <input type="checkbox" className="h-5 w-5 cursor-pointer accent-[#1A2B4A]" aria-label={`בוצעה: ${m.name || 'אבן דרך'}`} checked={m.done} onChange={(e) => commitMs(ms.map((x) => (x.id === m.id ? { ...x, done: e.target.checked } : x)))} />
+                <input type="date" className="field num !min-h-9 !py-1 text-sm" aria-label="תאריך אבן הדרך" value={m.date} onChange={(e) => editMs(m.id, { date: e.target.value })} onBlur={() => commitMs(ms)} />
+                <input className={`field !min-h-9 !py-1 text-sm font-semibold ${m.done ? 'font-normal text-mute line-through' : ''}`} placeholder="שם השלב" aria-label="שם אבן הדרך" value={m.name} onChange={(e) => editMs(m.id, { name: e.target.value })} onBlur={() => commitMs(ms)} />
+                <IconButton name="x" label="הסרת אבן הדרך" tone="danger" size={14} className="!h-8 !w-8" onClick={() => commitMs(ms.filter((x) => x.id !== m.id))} />
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        {/* סטטוס, מועד והתקדמות: משניים */}
+        <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr]">
+          <div>
+            <label className="label" htmlFor={`st-${p.id}`}>סטטוס</label>
+            <select id={`st-${p.id}`} className="field" value={p.status} onChange={(e) => save({ status: e.target.value as ProjectStatus, ...(e.target.value === 'done' ? { progress: 100 } : {}) })}>
+              {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label" htmlFor={`du-${p.id}`}>מועד יעד</label>
+            <input id={`du-${p.id}`} type="date" className="field num" value={p.due_date ?? ''} onChange={(e) => save({ due_date: e.target.value || null })} />
+          </div>
+        </div>
+        <div className="mt-3">
+          <label className="label flex items-center justify-between" htmlFor={`pr-${p.id}`}>
+            <span>התקדמות</span>
+            <span className="num font-semibold text-[#111111]">{p.progress}%</span>
+          </label>
+          <input id={`pr-${p.id}`} type="range" min={0} max={100} step={5} value={p.progress} className="h-6 w-full cursor-pointer accent-[#1A2B4A]" onChange={(e) => save({ progress: Number(e.target.value) })} />
+        </div>
+
+        <div className="mt-3">
+          <label className="label" htmlFor={`no-${p.id}`}>הערה</label>
+          <textarea id={`no-${p.id}`} rows={2} className="field resize-y" value={note} onChange={(e) => setNote(e.target.value)} onBlur={() => commitText('note', note, p.note)} />
+        </div>
+
+        <p className={`mt-3 flex items-center gap-1.5 text-xs ${stale ? 'font-semibold text-[#B85F0B]' : 'text-mute'}`}>
+          <Icon name="clock" size={12} />
+          {stale ? `לא עודכן ${daysSince(p.updated_at)} ימים` : `עודכן ${daysSince(p.updated_at) === 0 ? 'היום' : `לפני ${daysSince(p.updated_at)} ימים`}`}
+        </p>
+      </>)}
     </li>
   )
 }
