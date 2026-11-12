@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import TopBar from './components/TopBar'
 import ExtractionReview from './components/ExtractionReview'
 import { PasteDialog } from './components/UploadZone'
@@ -7,6 +7,8 @@ import { formatLong } from './lib/dateUtils'
 import Home from './pages/Home'
 import EventDetail from './pages/EventDetail'
 import Settings from './pages/Settings'
+import Welcome from './pages/Welcome'
+import { seenToday } from './lib/inspire'
 import Login from './pages/Login'
 import { Ctx } from './lib/ctx'
 import { useAccess } from './hooks/useAccess'
@@ -72,7 +74,9 @@ export default function App() {
           <TopBar />
           <main className="flex min-h-0 flex-1 flex-col overflow-auto">
             <Routes>
-              <Route path="/" element={<Home uploading={up.stage === 'working'} step={up.step} />} />
+              {/* בפעם הראשונה בכל יום נפתח דף ההשראה */}
+              <Route path="/" element={seenToday() ? <Home uploading={up.stage === 'working'} step={up.step} /> : <Navigate to="/welcome" replace />} />
+              <Route path="/welcome" element={<Welcome />} />
               <Route path="/event/:id" element={<EventDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<p className="p-8">הדף לא נמצא. אפשר לחזור ליומן דרך שם האפליקציה למעלה.</p>} />

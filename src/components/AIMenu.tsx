@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../lib/ctx'
+import Icon, { type IconName } from './Icon'
 
 // <ai-menu>: כפתור לוגו יחיד שמחזיק את כל פעולות העריכה והמערכת
 export default function AIMenu() {
@@ -48,24 +49,26 @@ export default function AIMenu() {
       {open && (
         <div role="menu" className="absolute top-12 right-0 z-30 w-60 rounded-lg bg-white p-2 shadow-pop">
           <div className="px-3 pb-1 pt-2 text-xs text-mute">הוספה ליומן</div>
-          <Item onClick={act(app.pickFile)}>העלאת מסמך</Item>
-          <Item onClick={act(app.openPaste)}>הדבקת טקסט או אימייל</Item>
-          <Item onClick={act(app.openVoice)}>הקלטת אירוע בקול</Item>
-          <Item onClick={act(() => app.newManual())}>אירוע ידני</Item>
+          <Item icon="upload" onClick={act(app.pickFile)}>העלאת מסמך</Item>
+          <Item icon="text" onClick={act(app.openPaste)}>הדבקת טקסט או אימייל</Item>
+          <Item icon="mic" onClick={act(app.openVoice)}>הקלטת אירוע בקול</Item>
+          <Item icon="plus" onClick={act(() => app.newManual())}>אירוע ידני</Item>
+          <Link role="menuitem" to="/welcome" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 hover:bg-soft"><Icon name="sun" size={18} />השראה להיום</Link>
           <div className="px-3 pb-1 pt-3 text-xs text-mute">מערכת</div>
-          <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className="block min-h-11 rounded-md px-3 py-2.5 hover:bg-soft">
-            הגדרות ווצאפ
+          <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 hover:bg-soft">
+            <Icon name="sliders" size={18} />הגדרות ווצאפ
           </Link>
-          {app.account !== null && <Item onClick={act(app.signOut)}>יציאה מהמכשיר הזה</Item>}
+          {app.account !== null && <Item icon="logout" onClick={act(app.signOut)}>יציאה מהמכשיר הזה</Item>}
         </div>
       )}
     </div>
   )
 }
 
-function Item({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function Item({ onClick, children, icon }: { onClick: () => void; children: React.ReactNode; icon: IconName }) {
   return (
-    <button role="menuitem" type="button" onClick={onClick} className="block min-h-11 w-full rounded-md px-3 py-2.5 text-right hover:bg-soft">
+    <button role="menuitem" type="button" onClick={onClick} className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 py-2.5 text-right hover:bg-soft">
+      <Icon name={icon} size={18} />
       {children}
     </button>
   )

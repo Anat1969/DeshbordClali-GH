@@ -16,7 +16,8 @@ export default function CategoryLegend() {
           {edit && cats.save === 'saving' && <span className="text-sm text-mute">שומר...</span>}
           {edit && cats.save === 'saved' && <span className="text-sm text-good">נשמר</span>}
           {edit && cats.save === 'error' && <span className="text-sm text-bad">השמירה נכשלה</span>}
-          <button type="button" className="btn !min-h-9 !px-3 text-sm" onClick={() => setEdit((e) => !e)}>
+          <button type="button" className="btn !min-h-9 gap-1.5 !px-3 text-sm" onClick={() => setEdit((e) => !e)}>
+            <Icon name={edit ? 'check' : 'pencil'} size={14} />
             {edit ? 'סיום עריכה' : 'עריכת קטגוריות'}
           </button>
         </div>

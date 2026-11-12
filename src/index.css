@@ -74,3 +74,8 @@ b, strong { font-weight: 600; }
 @keyframes blink { 50% { opacity: .2; } }
 .blink { animation: blink 1.3s ease-in-out 6; }
 @media (prefers-reduced-motion: reduce) { .blink { animation: none; } }
+
+/* נקודת הקלטה מהבהבת */
+@keyframes rec { 50% { opacity: .15; transform: scale(.8); } }
+.rec-dot { animation: rec 0.9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .rec-dot { animation: none; } }

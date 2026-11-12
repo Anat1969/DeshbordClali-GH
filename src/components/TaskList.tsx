@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react'
 import { useTasks } from '../hooks/useTasks'
 import { useSpeech } from '../hooks/useSpeech'
 import { useApp } from '../lib/ctx'
-import { IconButton } from './Icon'
+import Icon, { IconButton } from './Icon'
+import { formatCreated } from '../lib/dateUtils'
 import VoiceButton from './VoiceButton'
 import type { Task } from '../types'
 
@@ -115,8 +116,15 @@ function TaskRow({ task, onPatch, onRemove }: { task: Task; onPatch: (id: string
           aria-label={`סימון כבוצע: ${task.text}`}
           onChange={(e) => run(() => onPatch(task.id, { done: e.target.checked }))}
         />
-        <span className={`min-w-0 flex-1 break-words ${task.done ? 'text-mute line-through decoration-2' : ''}`}>{task.text}</span>
+        {/* משימה פתוחה: שחור ובולט. משימה שבוצעה: קו חוצה ואפור */}
+        <span className={`min-w-0 flex-1 break-words ${task.done ? 'text-mute line-through decoration-2' : 'font-semibold text-[#111111]'}`}>{task.text}</span>
       </div>
+      {formatCreated(task.created_at) && (
+        <p className="ms-8 mt-0.5 flex items-center gap-1 text-xs text-mute">
+          <Icon name="clock" size={12} />
+          {formatCreated(task.created_at)}
+        </p>
+      )}
 
       {task.note && !noteOpen && <p className="ms-8 mt-1 whitespace-pre-wrap break-words text-sm text-mute">{task.note}</p>}
 
@@ -131,7 +139,8 @@ function TaskRow({ task, onPatch, onRemove }: { task: Task; onPatch: (id: string
       )}
 
       <div className="ms-8 mt-2 flex items-center gap-4 text-sm">
-        <button type="button" className="text-navy underline underline-offset-4" onClick={() => (noteOpen ? saveNote().then(() => setNoteOpen(false)) : setNoteOpen(true))}>
+        <button type="button" className="inline-flex items-center gap-1.5 text-navy underline underline-offset-4" onClick={() => (noteOpen ? saveNote().then(() => setNoteOpen(false)) : setNoteOpen(true))}>
+          <Icon name="note" size={14} />
           {noteOpen ? 'סגירת הערה' : task.note ? 'עריכת הערה' : 'הוספת הערה'}
         </button>
         {confirmDel ? (
