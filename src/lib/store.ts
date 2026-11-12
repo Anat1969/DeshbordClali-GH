@@ -1,4 +1,5 @@
 import { supabase, demoMode } from './supabase'
+import { api } from './api'
 import type { CalEvent, EventDraft, Profile } from '../types'
 import { toIso } from './dateUtils'
 
@@ -6,7 +7,6 @@ import { toIso } from './dateUtils'
 const LS_EVENTS = 'sc_events_v1'
 const LS_PROFILE = 'sc_profile_v1'
 
-const COLS = 'id,user_id,title,event_date,event_time,location,people,description,raw_source,source_file_url,source_file_name,reminder_sent,created_at,updated_at'
 
 const normalize = (e: CalEvent): CalEvent => ({
   ...e,
@@ -45,9 +45,8 @@ function seedDemo(): CalEvent[] {
 
 export async function listEvents(): Promise<CalEvent[]> {
   if (!supabase) return readLocal()
-  const { data, error } = await supabase.from('yoman_events').select(COLS).order('event_date').order('event_time', { nullsFirst: true })
-  if (error) throw new Error(error.message)
-  return (data as CalEvent[]).map(normalize)
+  const { events } = await api<{ events: CalEvent[] }>('list')
+  return events.map(normalize)
 }
 
 export async function createEvent(d: EventDraft): Promise<CalEvent> {
@@ -58,9 +57,8 @@ export async function createEvent(d: EventDraft): Promise<CalEvent> {
     writeLocal([...readLocal(), ev])
     return ev
   }
-  const { data, error } = await supabase.from('yoman_events').insert({ ...d, event_time: d.event_time || null }).select(COLS).single()
-  if (error) throw new Error(error.message)
-  return normalize(data as CalEvent)
+  const { event } = await api<{ event: CalEvent }>('create', { draft: d })
+  return normalize(event)
 }
 
 export async function updateEvent(id: string, patch: Partial<EventDraft>): Promise<CalEvent> {
@@ -75,16 +73,8 @@ export async function updateEvent(id: string, patch: Partial<EventDraft>): Promi
     writeLocal(list)
     return list[i]
   }
-  const { data: prev } = await supabase.from('yoman_events').select('event_date').eq('id', id).single()
-  const dateChanged = patch.event_date && prev && patch.event_date !== prev.event_date
-  const { data, error } = await supabase
-    .from('yoman_events')
-    .update({ ...patch, event_time: patch.event_time || null, ...(dateChanged ? { reminder_sent: false } : {}), updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select(COLS)
-    .single()
-  if (error) throw new Error(error.message)
-  return normalize(data as CalEvent)
+  const { event } = await api<{ event: CalEvent }>('update', { id, patch })
+  return normalize(event)
 }
 
 export async function deleteEvent(id: string): Promise<void> {
@@ -92,35 +82,29 @@ export async function deleteEvent(id: string): Promise<void> {
     writeLocal(readLocal().filter((e) => e.id !== id))
     return
   }
-  const { error } = await supabase.from('yoman_events').delete().eq('id', id)
-  if (error) throw new Error(error.message)
+  await api('delete', { id })
 }
 
-// העלאת המסמך המקורי ל-Storage: documents/{user_id}/{timestamp}_{filename}
+// העלאת המסמך המקורי ל-Storage דרך כתובת העלאה חתומה מהשרת
 export async function uploadSource(file: File): Promise<{ path: string; name: string } | null> {
   if (!supabase) return null
-  const { data: u } = await supabase.auth.getUser()
-  if (!u.user) return null
-  // שם הקובץ במפתח בלועזית בלבד. השם המקורי נשמר בנפרד
-  const safe = file.name.replace(/[^A-Za-z0-9._-]/g, '_')
-  const path = `${u.user.id}/${Date.now()}_${safe}`
-  const { error } = await supabase.storage.from('yoman-documents').upload(path, file)
+  const { path, token } = await api<{ path: string; token: string }>('upload_url', { name: file.name })
+  const { error } = await supabase.storage.from('yoman-documents').uploadToSignedUrl(path, token, file)
   if (error) throw new Error(error.message)
   return { path, name: file.name }
 }
 
 export async function getSourceUrl(path: string): Promise<string | null> {
   if (!supabase) return null
-  const { data } = await supabase.storage.from('yoman-documents').createSignedUrl(path, 3600)
-  return data?.signedUrl ?? null
+  const { url } = await api<{ url: string | null }>('source_url', { path })
+  return url
 }
 
 export async function getProfile(): Promise<Profile> {
   if (!supabase) {
     try { return { whatsapp_number: localStorage.getItem(LS_PROFILE) ?? '' } } catch { return { whatsapp_number: '' } }
   }
-  const { data } = await supabase.from('yoman_profiles').select('whatsapp_number').maybeSingle()
-  return { whatsapp_number: data?.whatsapp_number ?? '' }
+  return api<Profile>('profile_get')
 }
 
 export async function saveProfile(p: Profile): Promise<void> {
@@ -128,10 +112,7 @@ export async function saveProfile(p: Profile): Promise<void> {
     try { localStorage.setItem(LS_PROFILE, p.whatsapp_number) } catch { /* אחסון חסום */ }
     return
   }
-  const { data: u } = await supabase.auth.getUser()
-  if (!u.user) throw new Error('לא מחוברת')
-  const { error } = await supabase.from('yoman_profiles').upsert({ user_id: u.user.id, whatsapp_number: p.whatsapp_number })
-  if (error) throw new Error(error.message)
+  await api('profile_set', { whatsapp_number: p.whatsapp_number })
 }
 
 export { demoMode }

@@ -1,8 +1,9 @@
 import { supabase } from './supabase'
+import { api, ApiError } from './api'
 import type { EventDraft } from '../types'
 import { emptyDraft } from '../types'
 
-// חילוץ פרטי אירוע ממסמך. המפתח של Claude נשמר רק בשרת (Edge Function yoman-extract),
+// חילוץ פרטי אירוע ממסמך. המפתח של Claude נשמר רק בשרת (Edge Function yoman-api),
 // כדי שלא ייחשף בדפדפן
 export interface ExtractInput {
   text?: string
@@ -42,9 +43,13 @@ export async function extractEvent(input: ExtractInput): Promise<EventDraft> {
   }
 
   const body = text ? { text: text.slice(0, 30000) } : { mime: file!.type, data: await toBase64(file!) }
-  const { data, error } = await supabase.functions.invoke('yoman-extract', { body })
-  if (error) throw new Error('החילוץ נכשל. אפשר לנסות שוב או למלא ידנית.')
-  const d = data as Partial<EventDraft> & { raw_source?: string }
+  let d: Partial<EventDraft> & { raw_source?: string }
+  try {
+    d = await api<Partial<EventDraft> & { raw_source?: string }>('extract', body)
+  } catch (e) {
+    if (e instanceof ApiError && e.code === 'no_anthropic_key') throw new Error('חסר מפתח Claude בשרת, ולכן אי אפשר לחלץ אוטומטית. אפשר למלא ידנית.')
+    throw new Error('החילוץ נכשל. אפשר לנסות שוב או למלא ידנית.')
+  }
   return {
     ...emptyDraft(),
     title: d.title ?? '',

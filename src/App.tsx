@@ -8,14 +8,14 @@ import EventDetail from './pages/EventDetail'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import { Ctx } from './lib/ctx'
-import { useAuth } from './hooks/useAuth'
+import { useAccess } from './hooks/useAccess'
 import { useEvents } from './hooks/useEvents'
 import { useUpload } from './hooks/useUpload'
 import { demoMode } from './lib/supabase'
 
 export default function App() {
-  const auth = useAuth()
-  const authed = demoMode || Boolean(auth.session)
+  const access = useAccess()
+  const authed = access.allowed
   const ev = useEvents(authed)
   const up = useUpload()
   const fileInput = useRef<HTMLInputElement>(null)
@@ -41,8 +41,7 @@ export default function App() {
     return () => window.removeEventListener('paste', onPaste)
   })
 
-  if (!auth.ready) return <div className="skeleton m-6 h-24" />
-  if (!authed) return <Login onSignIn={() => auth.signIn()} />
+  if (!authed) return <Login onEnter={access.enter} />
 
   const saveDraft = async (d: Parameters<typeof ev.add>[0]) => {
     await ev.add(d)
@@ -59,8 +58,8 @@ export default function App() {
           openPaste: () => setPaste(true),
           newManual: up.manual,
           fromFile: up.fromFile,
-          signOut: () => auth.signOut(),
-          email: demoMode ? null : auth.session?.user.email ?? '',
+          signOut: access.leave,
+          account: demoMode ? null : 'מפתח אישי',
           toast,
         }}
       >

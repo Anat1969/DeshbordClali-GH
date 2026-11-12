@@ -41,14 +41,14 @@ Deno.serve(async (req) => {
 
   const { data: events, error } = await supabase
     .from('yoman_events')
-    .select('id,user_id,title,event_time,location,people')
+    .select('id,owner_hash,title,event_time,location,people')
     .eq('event_date', tomorrowIL())
     .eq('reminder_sent', false)
   if (error) return new Response(error.message, { status: 500 })
 
   let sent = 0
   for (const e of events ?? []) {
-    const { data: p } = await supabase.from('yoman_profiles').select('whatsapp_number').eq('user_id', e.user_id).maybeSingle()
+    const { data: p } = await supabase.from('yoman_profiles').select('whatsapp_number').eq('owner_hash', e.owner_hash).maybeSingle()
     if (!p?.whatsapp_number) continue // אין מספר: מדלגים, והתזכורת תישלח כשיוגדר
     // מסמנים כנשלח רק אם Twilio אישר, כדי שכישלון ינוסה שוב
     if (await sendWhatsApp(p.whatsapp_number, buildMessage(e))) {
