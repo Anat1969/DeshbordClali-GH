@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* בסיס: לבן, דיו רך, עברית מימין לשמאל */
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: #fff;
+  color: #2E2E2B;
+  font-family: Heebo, system-ui, sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+}
+/* אין משקל 700 בשום מקום: הדגשה היא 600 */
+b, strong { font-weight: 600; }
+.num { font-family: Inter, Heebo, sans-serif; font-variant-numeric: tabular-nums; }
+
+/* כפתור: בלי קו מסגרת, הצורה נקראת מהרקע ומהצל */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 44px; padding: 0 1.1rem; border: 0; border-radius: 8px;
+  background: #F3F4F6; color: #2E2E2B; font: inherit; font-weight: 400; cursor: pointer;
+  box-shadow: 0 1px 2px rgba(26,43,74,.10), 0 2px 8px rgba(26,43,74,.06);
+  transition: box-shadow .15s, background .15s;
+}
+.btn:hover { background: #E9EBEF; box-shadow: 0 2px 4px rgba(26,43,74,.14), 0 4px 12px rgba(26,43,74,.08); }
+.btn:focus-visible { outline: 2px solid #1A2B4A; outline-offset: 2px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.btn-primary { background: #1A2B4A; color: #fff; font-weight: 600; }
+.btn-primary:hover { background: #22375F; }
+.btn-danger { color: #B3392F; }
+
+/* שדה: רקע בהיר, בלי מסגרת. מיקוד מסומן בקו כחול */
+.field {
+  width: 100%; min-height: 44px; padding: .55rem .8rem; border: 0; border-radius: 8px;
+  background: #F3F4F6; color: #2E2E2B; font: inherit;
+  box-shadow: inset 0 -2px 0 transparent; transition: box-shadow .15s, background .15s;
+}
+.field:focus { outline: none; background: #EEF0F4; box-shadow: inset 0 -2px 0 #1A2B4A; }
+.field.invalid { background: #FBECEA; box-shadow: inset 0 -2px 0 #B3392F; }
+.label { display: block; margin-bottom: .3rem; font-size: .8rem; color: #6B6F76; }
+
+/* אזור גרירה: מסגרת מקווקווה שזזה כשקובץ מגיע */
+@keyframes march { to { background-position: 24px 0, -24px 100%, 0 -24px, 100% 24px; } }
+.dropzone {
+  --c: #C9CED8;
+  background:
+    repeating-linear-gradient(90deg, var(--c) 0 12px, transparent 12px 24px) 0 0 / 100% 2px no-repeat,
+    repeating-linear-gradient(90deg, var(--c) 0 12px, transparent 12px 24px) 0 100% / 100% 2px no-repeat,
+    repeating-linear-gradient(0deg, var(--c) 0 12px, transparent 12px 24px) 0 0 / 2px 100% no-repeat,
+    repeating-linear-gradient(0deg, var(--c) 0 12px, transparent 12px 24px) 100% 0 / 2px 100% no-repeat;
+  border-radius: 8px;
+}
+.dropzone.active { --c: #1A2B4A; animation: march .8s linear infinite; background-color: #F4F6FA; }
+
+/* שלד טעינה */
+@keyframes pulse2 { 50% { opacity: .45; } }
+.skeleton { background: #F3F4F6; border-radius: 8px; animation: pulse2 1.2s ease-in-out infinite; }
+
+/* הבהוב חד־פעמי לאירוע שנוסף או השתנה */
+@keyframes flash { from { box-shadow: 0 0 0 5px #FFE066; } to { box-shadow: 0 0 0 5px transparent; } }
+.flash { animation: flash 1.4s ease-out 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dropzone.active, .skeleton, .flash { animation: none; }
+}

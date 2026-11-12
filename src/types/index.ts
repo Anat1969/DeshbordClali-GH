@@ -1,0 +1,46 @@
+// אירוע כפי שהוא נשמר בטבלת events
+export interface CalEvent {
+  id: string
+  user_id: string | null
+  title: string
+  event_date: string // YYYY-MM-DD
+  event_time: string | null // HH:MM
+  location: string | null
+  people: string[]
+  description: string | null
+  raw_source: string | null
+  source_file_url: string | null // נתיב ב-Storage
+  source_file_name: string | null
+  reminder_sent: boolean
+  created_at: string
+  updated_at: string
+}
+
+// טיוטה: מה שחולץ מהמסמך, לפני אישור
+export interface EventDraft {
+  title: string
+  event_date: string | null
+  event_time: string | null
+  location: string | null
+  people: string[]
+  description: string | null
+  raw_source: string | null
+  source_file_url: string | null
+  source_file_name: string | null
+}
+
+export const emptyDraft = (): EventDraft => ({
+  title: '',
+  event_date: null,
+  event_time: null,
+  location: null,
+  people: [],
+  description: null,
+  raw_source: null,
+  source_file_url: null,
+  source_file_name: null,
+})
+
+export interface Profile {
+  whatsapp_number: string
+}
