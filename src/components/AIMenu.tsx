@@ -50,7 +50,8 @@ export default function AIMenu() {
           <div className="px-3 pb-1 pt-2 text-xs text-mute">הוספה ליומן</div>
           <Item onClick={act(app.pickFile)}>העלאת מסמך</Item>
           <Item onClick={act(app.openPaste)}>הדבקת טקסט או אימייל</Item>
-          <Item onClick={act(app.newManual)}>אירוע ידני</Item>
+          <Item onClick={act(app.openVoice)}>הקלטת אירוע בקול</Item>
+          <Item onClick={act(() => app.newManual())}>אירוע ידני</Item>
           <div className="px-3 pb-1 pt-3 text-xs text-mute">מערכת</div>
           <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className="block min-h-11 rounded-md px-3 py-2.5 hover:bg-soft">
             הגדרות ווצאפ

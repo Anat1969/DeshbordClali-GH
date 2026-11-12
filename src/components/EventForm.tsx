@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import type { EventDraft } from '../types'
 import { useSpeech } from '../hooks/useSpeech'
+import Icon from './Icon'
+import VoiceButton from './VoiceButton'
 import { SLOTS, slotOf } from '../lib/categories'
 import { useApp } from '../lib/ctx'
 
 // טופס אירוע משותף לאישור חילוץ ולעריכה
-export default function EventForm({ value, onChange, showErrors }: { value: EventDraft; onChange: (v: EventDraft) => void; showErrors: boolean }) {
+export default function EventForm({ value, onChange, showErrors, autoFocus, onSubmit }: { value: EventDraft; onChange: (v: EventDraft) => void; showErrors: boolean; autoFocus?: boolean; onSubmit?: () => void }) {
   const { cats } = useApp()
   const [peopleText, setPeopleText] = useState(value.people.join(', '))
   const set = <K extends keyof EventDraft>(k: K, v: EventDraft[K]) => onChange({ ...value, [k]: v })
@@ -18,7 +20,7 @@ export default function EventForm({ value, onChange, showErrors }: { value: Even
     <div className="grid gap-4">
       <div>
         <label className="label" htmlFor="f-title">שם האירוע</label>
-        <input id="f-title" className={`field ${missingTitle ? 'invalid' : ''}`} value={value.title} onChange={(e) => set('title', e.target.value)} />
+        <input id="f-title" autoFocus={autoFocus} className={`field ${missingTitle ? 'invalid' : ''}`} value={value.title} onChange={(e) => set('title', e.target.value)} onKeyDown={(e) => e.key === 'Enter' && onSubmit?.()} />
         {missingTitle && <p className="mt-1 text-sm text-bad">חסר שם. כדאי להזין שם קצר לאירוע.</p>}
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -50,6 +52,7 @@ export default function EventForm({ value, onChange, showErrors }: { value: Even
                 style={{ background: s.color, color: s.fg, fontWeight: on ? 600 : 400, boxShadow: on ? '0 0 0 3px #fff, 0 0 0 6px #1A2B4A' : undefined }}
                 onClick={() => set('category', s.key)}
               >
+                <Icon name={s.icon} size={16} />
                 {cats.names[s.key]}
               </button>
             )
@@ -76,15 +79,9 @@ export default function EventForm({ value, onChange, showErrors }: { value: Even
         />
       </div>
       <div>
-        <div className="flex items-center justify-between">
-          <label className="label" htmlFor="f-desc">תיאור</label>
-          {speech.supported && (
-            <button type="button" className="mb-1 text-sm text-navy underline underline-offset-4" onClick={speech.toggle}>
-              {speech.listening ? 'עצירת הקלטה' : 'הקלטה ותמלול'}
-            </button>
-          )}
-        </div>
+        <label className="label" htmlFor="f-desc">תיאור</label>
         <textarea id="f-desc" rows={3} className="field resize-none" value={value.description ?? ''} onChange={(e) => set('description', e.target.value || null)} />
+        <VoiceButton speech={speech} className="mt-2" />
       </div>
     </div>
   )

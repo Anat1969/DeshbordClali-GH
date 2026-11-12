@@ -5,7 +5,7 @@ import Modal from './Modal'
 import { todayIso, daysUntil } from '../lib/dateUtils'
 
 // מה חולץ: ענת בודקת, עורכת ומאשרת לפני שמירה
-export default function ExtractionReview({ draft, manual, onSave, onCancel }: { draft: EventDraft; manual: boolean; onSave: (d: EventDraft) => Promise<void>; onCancel: () => void }) {
+export default function ExtractionReview({ draft, manual, dateNote, onSave, onCancel }: { draft: EventDraft; manual: boolean; dateNote?: string | null; onSave: (d: EventDraft) => Promise<void>; onCancel: () => void }) {
   const [v, setV] = useState(draft)
   const [tried, setTried] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -32,10 +32,10 @@ export default function ExtractionReview({ draft, manual, onSave, onCancel }: { 
     <Modal title="אישור פרטי האירוע" onClose={onCancel} wide>
       <h2 className="text-2xl font-light">{manual ? 'אירוע חדש' : 'זה מה שחולץ מהמסמך'}</h2>
       <p className="mb-5 mt-1 text-sm text-mute">
-        {manual ? 'ממלאים את הפרטים ושומרים.' : missing.length ? `חסר: ${missing.join(' ו')}. אפשר להשלים כאן.` : 'כל השדות ניתנים לעריכה. האירוע נשמר רק אחרי אישור.'}
+        {manual ? (dateNote ? `האירוע ב${dateNote}. מקלידים שם ולוחצים Enter לשמירה.` : 'ממלאים את הפרטים ושומרים.') : missing.length ? `חסר: ${missing.join(' ו')}. אפשר להשלים כאן.` : 'כל השדות ניתנים לעריכה. האירוע נשמר רק אחרי אישור.'}
       </p>
       <div className="grid gap-6 md:grid-cols-[1fr_.8fr]">
-        <EventForm value={v} onChange={setV} showErrors={tried} />
+        <EventForm value={v} onChange={setV} showErrors={tried} autoFocus={manual} onSubmit={save} />
         {!manual && (
           <aside className="min-w-0 text-sm">
             <div className="label">מקור</div>
