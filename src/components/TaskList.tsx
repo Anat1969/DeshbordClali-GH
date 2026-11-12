@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import { useTasks } from '../hooks/useTasks'
 import { useSpeech } from '../hooks/useSpeech'
 import { useApp } from '../lib/ctx'
+import { IconButton } from './Icon'
+import VoiceButton from './VoiceButton'
 import type { Task } from '../types'
 
 type Filter = 'all' | 'open' | 'done'
@@ -52,13 +54,9 @@ export default function TaskList() {
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submit()}
         />
-        <button type="button" className="btn btn-primary shrink-0" disabled={!text.trim()} onClick={submit}>הוספה</button>
+        <IconButton name="plus" label="הוספת משימה" tone="primary" size={22} className="!h-11 !w-11" disabled={!text.trim()} onClick={submit} />
       </div>
-      {speech.supported && (
-        <button type="button" className="mt-2 self-start text-sm text-navy underline underline-offset-4" onClick={speech.toggle}>
-          {speech.listening ? 'עצירת הקלטה' : 'הקלטה ותמלול של משימה'}
-        </button>
-      )}
+      <VoiceButton speech={speech} label="הקלטת משימה" className="mt-2" />
 
       <div className="mt-3 grid grid-cols-3 gap-2" role="group" aria-label="סינון משימות">
         {FILTERS.map(([k, label]) => (
@@ -125,25 +123,21 @@ function TaskRow({ task, onPatch, onRemove }: { task: Task; onPatch: (id: string
       {noteOpen && (
         <div className="ms-8 mt-2">
           <textarea className="field resize-none" rows={3} value={note} aria-label="הערה למשימה" placeholder="הערה" onChange={(e) => setNote(e.target.value)} onBlur={saveNote} />
+          <VoiceButton speech={speech} className="mt-2" />
           <div className="mt-1 flex items-center gap-3 text-sm">
-            {speech.supported && (
-              <button type="button" className="text-navy underline underline-offset-4" onClick={speech.toggle}>
-                {speech.listening ? 'עצירת הקלטה' : 'הקלטה ותמלול'}
-              </button>
-            )}
             {saved && <span className="text-good">נשמר</span>}
           </div>
         </div>
       )}
 
-      <div className="ms-8 mt-2 flex gap-4 text-sm">
+      <div className="ms-8 mt-2 flex items-center gap-4 text-sm">
         <button type="button" className="text-navy underline underline-offset-4" onClick={() => (noteOpen ? saveNote().then(() => setNoteOpen(false)) : setNoteOpen(true))}>
           {noteOpen ? 'סגירת הערה' : task.note ? 'עריכת הערה' : 'הוספת הערה'}
         </button>
         {confirmDel ? (
           <button type="button" className="font-semibold text-bad underline underline-offset-4" onClick={() => run(() => onRemove(task.id))}>בטוחה? מחיקה</button>
         ) : (
-          <button type="button" className="text-bad underline underline-offset-4" onClick={() => setConfirmDel(true)}>מחיקה</button>
+          <IconButton name="x" label="מחיקת המשימה" tone="danger" size={16} className="!h-7 !w-7" onClick={() => setConfirmDel(true)} />
         )}
       </div>
     </li>

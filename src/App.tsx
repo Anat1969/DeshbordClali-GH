@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import TopBar from './components/TopBar'
 import ExtractionReview from './components/ExtractionReview'
 import { PasteDialog } from './components/UploadZone'
+import { formatLong } from './lib/dateUtils'
 import Home from './pages/Home'
 import EventDetail from './pages/EventDetail'
 import Settings from './pages/Settings'
@@ -21,7 +22,7 @@ export default function App() {
   const cats = useCategories(authed)
   const up = useUpload(cats.names)
   const fileInput = useRef<HTMLInputElement>(null)
-  const [paste, setPaste] = useState(false)
+  const [paste, setPaste] = useState<false | 'text' | 'voice'>(false)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
 
   const toast = useCallback((m: string) => {
@@ -58,8 +59,9 @@ export default function App() {
           ev,
           cats,
           pickFile: () => fileInput.current?.click(),
-          openPaste: () => setPaste(true),
-          newManual: up.manual,
+          openPaste: () => setPaste('text'),
+          openVoice: () => setPaste('voice'),
+          newManual: (date?: string) => up.manual(date),
           fromFile: up.fromFile,
           signOut: access.leave,
           account: demoMode ? null : 'מפתח אישי',
@@ -89,13 +91,13 @@ export default function App() {
             e.target.value = ''
           }}
         />
-        {paste && <PasteDialog onClose={() => setPaste(false)} onSubmit={(t) => (setPaste(false), up.fromText(t))} />}
-        {up.stage === 'review' && up.draft && <ExtractionReview draft={up.draft} manual={up.draft.raw_source === null && !up.draft.source_file_name} onSave={saveDraft} onCancel={up.reset} />}
+        {paste && <PasteDialog voice={paste === 'voice'} onClose={() => setPaste(false)} onSubmit={(t) => (setPaste(false), up.fromText(t))} />}
+        {up.stage === 'review' && up.draft && <ExtractionReview draft={up.draft} manual={up.draft.raw_source === null && !up.draft.source_file_name} dateNote={up.draft.event_date && up.draft.raw_source === null && !up.draft.source_file_name ? formatLong(up.draft.event_date) : null} onSave={saveDraft} onCancel={up.reset} />}
         {up.stage === 'error' && (
           <div className="fixed inset-x-4 bottom-6 z-50 mx-auto flex max-w-md items-center justify-between gap-3 rounded-lg bg-white p-4 shadow-pop" role="alert">
             <span className="text-bad">{up.error}</span>
             <span className="flex gap-2">
-              <button type="button" className="btn" onClick={up.manual}>מילוי ידני</button>
+              <button type="button" className="btn" onClick={() => up.manual()}>מילוי ידני</button>
               <button type="button" className="btn" onClick={up.reset}>סגירה</button>
             </span>
           </div>

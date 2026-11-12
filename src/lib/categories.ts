@@ -1,12 +1,13 @@
 // קטגוריות: שבעה צבעי קשת. ארבעה מוגדרים כברירת מחדל, ושלושה פנויים לשמות של ענת
+// icon: אייקון לכל צבע (עבודה תיק, בילוי כוס, רפואה צלב, לימודים ספר). ink: גוון כהה לאייקון על רקע בהיר
 export const SLOTS = [
-  { key: 'red', label: 'אדום', color: '#D93B3B', fg: '#FFFFFF' },
-  { key: 'orange', label: 'כתום', color: '#F08A24', fg: '#2E2E2B' },
-  { key: 'yellow', label: 'צהוב', color: '#F2C514', fg: '#2E2E2B' },
-  { key: 'green', label: 'ירוק', color: '#2E9E5B', fg: '#FFFFFF' },
-  { key: 'blue', label: 'כחול', color: '#2B6CD9', fg: '#FFFFFF' },
-  { key: 'indigo', label: 'אינדיגו', color: '#4B3FA8', fg: '#FFFFFF' },
-  { key: 'violet', label: 'סגול', color: '#8E44C8', fg: '#FFFFFF' },
+  { key: 'red', label: 'אדום', color: '#D93B3B', ink: '#B92B2B', fg: '#FFFFFF', icon: 'briefcase' },
+  { key: 'orange', label: 'כתום', color: '#F08A24', ink: '#B85F0B', fg: '#2E2E2B', icon: 'home' },
+  { key: 'yellow', label: 'צהוב', color: '#F2C514', ink: '#8A6D00', fg: '#2E2E2B', icon: 'star' },
+  { key: 'green', label: 'ירוק', color: '#2E9E5B', ink: '#1F7A44', fg: '#FFFFFF', icon: 'glass' },
+  { key: 'blue', label: 'כחול', color: '#2B6CD9', ink: '#1E52AE', fg: '#FFFFFF', icon: 'cross' },
+  { key: 'indigo', label: 'אינדיגו', color: '#4B3FA8', ink: '#3B3188', fg: '#FFFFFF', icon: 'flag' },
+  { key: 'violet', label: 'סגול', color: '#8E44C8', ink: '#6F2FA3', fg: '#FFFFFF', icon: 'book' },
 ] as const
 
 export type SlotKey = (typeof SLOTS)[number]['key']

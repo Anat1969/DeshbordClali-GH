@@ -32,8 +32,9 @@ export function useUpload(names: CatNames) {
     }
   }
 
-  const manual = () => {
-    setDraft(emptyDraft())
+  // אירוע ידני, אפשר עם תאריך שנבחר מראש (לחיצה כפולה על יום בלוח)
+  const manual = (date?: string) => {
+    setDraft({ ...emptyDraft(), event_date: date ?? null })
     setStage('review')
   }
 

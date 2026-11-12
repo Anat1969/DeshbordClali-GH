@@ -3,6 +3,7 @@ import CalendarMonthView from '../components/CalendarMonthView'
 import EventCard from '../components/EventCard'
 import EventModal from '../components/EventModal'
 import UploadZone from '../components/UploadZone'
+import { IconButton } from '../components/Icon'
 import { useApp } from '../lib/ctx'
 import TaskList from '../components/TaskList'
 import { VIEW_STEP, addDays, daysUntil, formatLong, formatShort, formatTime, relativeDays, todayIso, type ViewMode } from '../lib/dateUtils'
@@ -49,12 +50,13 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
         ) : next ? (
           <>
             <h1 className="text-2xl font-light sm:text-3xl">
-              האירוע הבא: <b>{next.title}</b>, {relativeDays(next.event_date)}
+              האירוע הבא: <mark className="marker font-semibold">{next.title}</mark>, {relativeDays(next.event_date)}
             </h1>
-            <p className="mt-1 text-mute">
+            {/* שורת התאריך של האירוע הבא: גדולה, ומהבהבת כמה פעמים */}
+            <p className="blink mt-1.5 text-xl font-semibold sm:text-3xl" aria-live="polite">
               {formatShort(next.event_date)}
               {next.event_time ? ` בשעה ${formatTime(next.event_time)}` : ''}
-              {next.location ? `, ${next.location}` : ''}
+              {next.location && <span className="text-base font-normal text-mute sm:text-xl">{`, ${next.location}`}</span>}
             </p>
           </>
         ) : (
@@ -83,6 +85,8 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
               events={events}
               selected={selected}
               flashId={flashId}
+              nextId={next?.id ?? null}
+              onAdd={(iso) => (setSelected(iso), app.newManual(iso))}
               onMode={setMode}
               onSelect={setSelected}
               onPrev={() => go(-1)}
@@ -94,9 +98,12 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
         </div>
 
         <aside className="flex w-full shrink-0 flex-col gap-5 lg:min-h-0 lg:w-[380px] lg:overflow-auto">
-          <UploadZone onFile={app.fromFile} onPaste={app.openPaste} onPick={app.pickFile} busy={uploading} step={step} />
+          <UploadZone onFile={app.fromFile} onPaste={app.openPaste} onPick={app.pickFile} onVoice={app.openVoice} busy={uploading} step={step} />
           <section aria-label="אירועי היום שנבחר">
-            <h2 className="mb-3 text-lg font-light">{formatLong(selected)}</h2>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h2 className="text-lg font-light">{formatLong(selected)}</h2>
+              <IconButton name="plus" label="הוספת אירוע ליום הזה" tone="primary" size={20} className="!h-10 !w-10" onClick={() => app.newManual(selected)} />
+            </div>
             {day.length > 0 ? (
               <div className="grid gap-2">
                 {day.map((e) => (
@@ -106,7 +113,7 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
             ) : (
               <div className="rounded-lg bg-soft p-4 text-mute">
                 <p>אין אירועים ביום הזה.</p>
-                <button type="button" className="mt-2 text-navy underline underline-offset-4" onClick={app.newManual}>הוספת אירוע ידני</button>
+                <p className="mt-1 text-sm">לחיצה כפולה על יום בלוח, או על +, מוסיפה אירוע ישר לתאריך.</p>
               </div>
             )}
           </section>

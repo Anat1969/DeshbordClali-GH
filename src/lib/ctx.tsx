@@ -8,7 +8,8 @@ export interface AppCtx {
   cats: ReturnType<typeof useCategories>
   pickFile: () => void
   openPaste: () => void
-  newManual: () => void
+  newManual: (date?: string) => void
+  openVoice: () => void
   fromFile: (f: File) => void
   signOut: () => void
   account: string | null
