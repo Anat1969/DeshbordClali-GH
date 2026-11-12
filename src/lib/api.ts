@@ -32,9 +32,9 @@ export class ApiError extends Error {
 }
 
 // קריאה לשרת. 401 מוחק את המפתח ומחזיר למסך הכניסה
-export async function api<T = Record<string, unknown>>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
+export async function api<T = Record<string, unknown>>(action: string, payload: Record<string, unknown> = {}, fn = 'yoman-api'): Promise<T> {
   if (!supabase || !URL_BASE) throw new ApiError(0, 'no_backend')
-  const res = await fetch(`${URL_BASE}/functions/v1/yoman-api`, {
+  const res = await fetch(`${URL_BASE}/functions/v1/${fn}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-yoman-key': getKey() ?? '', apikey: ANON ?? '' },
     body: JSON.stringify({ action, ...payload }),

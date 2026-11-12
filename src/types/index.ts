@@ -47,3 +47,13 @@ export const emptyDraft = (): EventDraft => ({
 export interface Profile {
   whatsapp_number: string
 }
+
+// משימה ברשימה הצדדית
+export interface Task {
+  id: string
+  text: string
+  note: string | null
+  done: boolean
+  done_at: string | null
+  created_at: string
+}
