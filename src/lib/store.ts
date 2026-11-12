@@ -45,7 +45,7 @@ function seedDemo(): CalEvent[] {
 
 export async function listEvents(): Promise<CalEvent[]> {
   if (!supabase) return readLocal()
-  const { data, error } = await supabase.from('events').select(COLS).order('event_date').order('event_time', { nullsFirst: true })
+  const { data, error } = await supabase.from('yoman_events').select(COLS).order('event_date').order('event_time', { nullsFirst: true })
   if (error) throw new Error(error.message)
   return (data as CalEvent[]).map(normalize)
 }
@@ -58,7 +58,7 @@ export async function createEvent(d: EventDraft): Promise<CalEvent> {
     writeLocal([...readLocal(), ev])
     return ev
   }
-  const { data, error } = await supabase.from('events').insert({ ...d, event_time: d.event_time || null }).select(COLS).single()
+  const { data, error } = await supabase.from('yoman_events').insert({ ...d, event_time: d.event_time || null }).select(COLS).single()
   if (error) throw new Error(error.message)
   return normalize(data as CalEvent)
 }
@@ -75,10 +75,10 @@ export async function updateEvent(id: string, patch: Partial<EventDraft>): Promi
     writeLocal(list)
     return list[i]
   }
-  const { data: prev } = await supabase.from('events').select('event_date').eq('id', id).single()
+  const { data: prev } = await supabase.from('yoman_events').select('event_date').eq('id', id).single()
   const dateChanged = patch.event_date && prev && patch.event_date !== prev.event_date
   const { data, error } = await supabase
-    .from('events')
+    .from('yoman_events')
     .update({ ...patch, event_time: patch.event_time || null, ...(dateChanged ? { reminder_sent: false } : {}), updated_at: new Date().toISOString() })
     .eq('id', id)
     .select(COLS)
@@ -92,7 +92,7 @@ export async function deleteEvent(id: string): Promise<void> {
     writeLocal(readLocal().filter((e) => e.id !== id))
     return
   }
-  const { error } = await supabase.from('events').delete().eq('id', id)
+  const { error } = await supabase.from('yoman_events').delete().eq('id', id)
   if (error) throw new Error(error.message)
 }
 
@@ -104,14 +104,14 @@ export async function uploadSource(file: File): Promise<{ path: string; name: st
   // שם הקובץ במפתח בלועזית בלבד. השם המקורי נשמר בנפרד
   const safe = file.name.replace(/[^A-Za-z0-9._-]/g, '_')
   const path = `${u.user.id}/${Date.now()}_${safe}`
-  const { error } = await supabase.storage.from('documents').upload(path, file)
+  const { error } = await supabase.storage.from('yoman-documents').upload(path, file)
   if (error) throw new Error(error.message)
   return { path, name: file.name }
 }
 
 export async function getSourceUrl(path: string): Promise<string | null> {
   if (!supabase) return null
-  const { data } = await supabase.storage.from('documents').createSignedUrl(path, 3600)
+  const { data } = await supabase.storage.from('yoman-documents').createSignedUrl(path, 3600)
   return data?.signedUrl ?? null
 }
 
@@ -119,7 +119,7 @@ export async function getProfile(): Promise<Profile> {
   if (!supabase) {
     try { return { whatsapp_number: localStorage.getItem(LS_PROFILE) ?? '' } } catch { return { whatsapp_number: '' } }
   }
-  const { data } = await supabase.from('profiles').select('whatsapp_number').maybeSingle()
+  const { data } = await supabase.from('yoman_profiles').select('whatsapp_number').maybeSingle()
   return { whatsapp_number: data?.whatsapp_number ?? '' }
 }
 
@@ -130,7 +130,7 @@ export async function saveProfile(p: Profile): Promise<void> {
   }
   const { data: u } = await supabase.auth.getUser()
   if (!u.user) throw new Error('לא מחוברת')
-  const { error } = await supabase.from('profiles').upsert({ user_id: u.user.id, whatsapp_number: p.whatsapp_number })
+  const { error } = await supabase.from('yoman_profiles').upsert({ user_id: u.user.id, whatsapp_number: p.whatsapp_number })
   if (error) throw new Error(error.message)
 }
 

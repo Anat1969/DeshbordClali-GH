@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 import type { EventDraft } from '../types'
 import { emptyDraft } from '../types'
 
-// חילוץ פרטי אירוע ממסמך. המפתח של Claude נשמר רק בשרת (Edge Function extract-event),
+// חילוץ פרטי אירוע ממסמך. המפתח של Claude נשמר רק בשרת (Edge Function yoman-extract),
 // כדי שלא ייחשף בדפדפן
 export interface ExtractInput {
   text?: string
@@ -42,7 +42,7 @@ export async function extractEvent(input: ExtractInput): Promise<EventDraft> {
   }
 
   const body = text ? { text: text.slice(0, 30000) } : { mime: file!.type, data: await toBase64(file!) }
-  const { data, error } = await supabase.functions.invoke('extract-event', { body })
+  const { data, error } = await supabase.functions.invoke('yoman-extract', { body })
   if (error) throw new Error('החילוץ נכשל. אפשר לנסות שוב או למלא ידנית.')
   const d = data as Partial<EventDraft> & { raw_source?: string }
   return {

@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
   const { data: events, error } = await supabase
-    .from('events')
+    .from('yoman_events')
     .select('id,user_id,title,event_time,location,people')
     .eq('event_date', tomorrowIL())
     .eq('reminder_sent', false)
@@ -48,11 +48,11 @@ Deno.serve(async (req) => {
 
   let sent = 0
   for (const e of events ?? []) {
-    const { data: p } = await supabase.from('profiles').select('whatsapp_number').eq('user_id', e.user_id).maybeSingle()
+    const { data: p } = await supabase.from('yoman_profiles').select('whatsapp_number').eq('user_id', e.user_id).maybeSingle()
     if (!p?.whatsapp_number) continue // אין מספר: מדלגים, והתזכורת תישלח כשיוגדר
     // מסמנים כנשלח רק אם Twilio אישר, כדי שכישלון ינוסה שוב
     if (await sendWhatsApp(p.whatsapp_number, buildMessage(e))) {
-      await supabase.from('events').update({ reminder_sent: true }).eq('id', e.id)
+      await supabase.from('yoman_events').update({ reminder_sent: true }).eq('id', e.id)
       sent++
     }
   }
