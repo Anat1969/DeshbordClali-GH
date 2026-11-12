@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react'
 export type IconName =
   | 'briefcase' | 'glass' | 'cross' | 'book' | 'home' | 'star' | 'flag' | 'plus' | 'x' | 'mic' | 'stop'
   | 'chevronR' | 'chevronL' | 'pencil' | 'note' | 'clock' | 'pin' | 'users' | 'calendar' | 'file' | 'sliders' | 'upload' | 'text'
-  | 'check' | 'link' | 'copy' | 'key' | 'logout' | 'sun' | 'bulb' | 'quote' | 'news' | 'target' | 'music' | 'spark' | 'dumbbell' | 'external' | 'mail' | 'send' | 'chart'
+  | 'check' | 'link' | 'copy' | 'key' | 'logout' | 'sun' | 'bulb' | 'quote' | 'news' | 'target' | 'music' | 'spark' | 'dumbbell' | 'external' | 'mail' | 'send' | 'chart' | 'diamond' | 'paperclip' | 'globe'
 
 const PATHS: Record<IconName, React.ReactNode> = {
   briefcase: (<><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 13h18" /></>),
@@ -47,6 +47,9 @@ const PATHS: Record<IconName, React.ReactNode> = {
   mail: (<><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M3 7l9 6 9-6" /></>),
   send: <path d="M21 3L10 14M21 3l-7 18-4-7-7-4z" />,
   chart: <path d="M4 20V11M10 20V4M16 20v-7M22 20H2" />,
+  diamond: <path d="M12 3l8 9-8 9-8-9z" />,
+  paperclip: <path d="M20 11l-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 7" />,
+  globe: (<><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></>),
 }
 
 export default function Icon({ name, size = 18, className, style, strokeWidth = 1.8 }: { name: IconName; size?: number; className?: string; style?: CSSProperties; strokeWidth?: number }) {

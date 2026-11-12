@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { CalEvent } from '../types'
 import CategoryLegend from './CategoryLegend'
 import Icon, { IconButton } from './Icon'
+import type { MilestoneMark } from '../lib/projects'
 import { SLOTS, slotOf, tint } from '../lib/categories'
 import {
   HE_DAYS_FULL, HE_DAYS_SHORT, HE_MONTHS, VIEW_LABEL, formatRange, formatShort, parseIso, todayIso, weekdayOf, windowDays,
@@ -15,6 +16,7 @@ interface Props {
   selected: string
   flashId: string | null
   nextId: string | null
+  milestones: Map<string, MilestoneMark[]>
   onMode: (m: ViewMode) => void
   onSelect: (iso: string) => void
   onAdd: (iso: string) => void
@@ -31,7 +33,7 @@ const MONTH_LINE = '#1A2B4A' // גבול חודש
 const WEEKEND_BG = '#ECEEF1' // שישי ושבת
 
 // לוח מתגלגל: יום, שבוע, חודש, חודשיים או שלושה חודשים, תמיד כשהעוגן ("היום") במרכז החלון
-export default function CalendarMonthView({ mode, anchor, events, selected, flashId, nextId, onMode, onSelect, onAdd, onPrev, onNext, onToday, onOpenEvent }: Props) {
+export default function CalendarMonthView({ mode, anchor, events, selected, flashId, nextId, milestones, onMode, onSelect, onAdd, onPrev, onNext, onToday, onOpenEvent }: Props) {
   const days = useMemo(() => windowDays(anchor, mode), [anchor, mode])
   const byDate = useMemo(() => {
     const m = new Map<string, CalEvent[]>()
@@ -49,6 +51,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
 
   const cell = (iso: string, idx: number) => {
     const list = byDate.get(iso) ?? []
+    const marks = milestones.get(iso) ?? []
     const isSel = iso === selected
     const isToday = iso === today
     const dow = weekdayOf(iso)
@@ -89,7 +92,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
         aria-selected={isSel}
         data-today={isToday || undefined}
         data-weekend={weekend || undefined}
-        aria-label={`${formatShort(iso)}${list.length ? `, ${list.length} אירועים` : ''}. לחיצה כפולה להוספת אירוע`}
+        aria-label={`${formatShort(iso)}${list.length ? `, ${list.length} אירועים` : ''}${marks.length ? `, ${marks.length} אבני דרך` : ''}. לחיצה כפולה להוספת אירוע`}
         title="לחיצה כפולה: הוספת אירוע ליום הזה"
         style={style}
         onClick={() => onSelect(iso)}
@@ -100,6 +103,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
         <div className={`flex gap-1 ${big ? 'items-start justify-between' : 'flex-col items-center sm:flex-row sm:items-start sm:justify-between'}`}>
           <span className={`num text-sm ${big ? 'text-base sm:text-lg' : ''} ${isToday ? 'font-semibold' : iso < today && !isSel ? 'text-mute' : ''}`}>{label}</span>
           <span className="flex items-center gap-0.5">
+            {marks.length > 0 && <Icon name="diamond" size={iconSize} style={{ color: '#1A2B4A' }} />}
             {slotsHere.map((sl) => (
               <Icon key={sl.key} name={sl.icon} size={iconSize} style={{ color: sl.ink }} />
             ))}
@@ -122,6 +126,13 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
 
         {mode !== 'quarter' && (
           <div className={`mt-1 flex-col gap-1 ${big ? 'flex' : 'hidden sm:flex'}`}>
+            {/* אבני דרך של פרויקטים: מסגרת מקווקווה עם יהלום, כדי להבדיל מאירוע */}
+            {marks.map((m, i) => (
+              <div key={`ms-${i}`} className={`flex items-start gap-1.5 rounded-md border-2 border-dashed border-navy bg-white/70 px-1.5 py-1 text-xs leading-snug sm:text-sm ${m.done ? 'text-mute line-through' : 'text-[#111111]'}`} title={`אבן דרך בפרויקט ${m.projectName}`}>
+                <Icon name={m.done ? 'check' : 'diamond'} size={13} className="mt-0.5 shrink-0 text-navy" />
+                <span className="min-w-0 break-words"><b>{m.name}</b> <span className="text-mute">· {m.projectName}</span></span>
+              </div>
+            ))}
             {list.map((e) => {
               const sl = slotOf(e.category)
               const isNext = e.id === nextId

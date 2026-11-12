@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import DocLink from './DocLink'
 import { loadAt, type Brief, type BriefItem } from '../lib/brief'
 
 // תדרוך בוקר בשפת "מבט של 30 שניות": ציור היום כשטח, שלושה פרקים, ומתחת מה דורש תשומת לב ומה כבר סגור
@@ -87,6 +88,12 @@ function Items({ title, items }: { title: string; items: BriefItem[] }) {
                 {it.to ? <Link to={it.to} className="hover:underline">{it.title}</Link> : it.title}
               </p>
               <p className="m-0 mt-0.5 break-words text-[15px] leading-relaxed" style={{ color: SOFT }}>{it.text}</p>
+              {/* מסמכי המשימה, בגדול, כדי שיהיה חומר לבצע אותה */}
+              {it.docs && it.docs.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-2" aria-label="מסמכי המשימה">
+                  {it.docs.map((d) => <DocLink key={d.doc.id} taskId={d.taskId} doc={d.doc} big />)}
+                </div>
+              )}
             </div>
           </li>
         ))}

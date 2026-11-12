@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Favicon from './Favicon'
 import Icon, { IconButton } from './Icon'
 import { useApp } from '../lib/ctx'
 
@@ -22,7 +23,7 @@ export default function QuickLinks() {
       {links.items.map((l, i) => (
         <span key={`${l.url}-${i}`} className="inline-flex items-center">
           <a href={l.url} target="_blank" rel="noopener noreferrer" className="btn !min-h-9 gap-1.5 !px-3 text-sm">
-            <Icon name={/מייל|mail/i.test(l.name) ? 'mail' : 'link'} size={15} />
+            <Favicon url={l.url} size={16} fallback={/מייל|mail/i.test(l.name) ? 'mail' : 'link'} />
             {l.name}
             <Icon name="external" size={12} className="text-mute" />
           </a>

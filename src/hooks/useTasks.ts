@@ -39,6 +39,12 @@ export function useTasks() {
     }
   }
 
+  // מסמכים: התוצאה מהשרת מחליפה את המשימה במסך
+  const replace = (t: Task) => setTasks((l) => l.map((x) => (x.id === t.id ? { ...t, docs: t.docs ?? [] } : x)))
+  const addLink = async (id: string, name: string, url: string) => replace(await store.addTaskLink(id, name, url))
+  const addFile = async (id: string, file: File) => replace(await store.uploadTaskFile(id, file))
+  const removeDoc = async (id: string, docId: string) => replace(await store.removeTaskDoc(id, docId))
+
   const remove = async (id: string) => {
     const prev = tasks
     setTasks((l) => l.filter((t) => t.id !== id))
@@ -50,5 +56,5 @@ export function useTasks() {
     }
   }
 
-  return { tasks, loading, error, reload: load, add, patch, remove }
+  return { tasks, loading, error, reload: load, add, patch, remove, addLink, addFile, removeDoc }
 }
