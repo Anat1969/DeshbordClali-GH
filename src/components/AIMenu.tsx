@@ -53,6 +53,7 @@ export default function AIMenu() {
           <Item icon="text" onClick={act(app.openPaste)}>הדבקת טקסט או אימייל</Item>
           <Item icon="mic" onClick={act(app.openVoice)}>הקלטת אירוע בקול</Item>
           <Item icon="plus" onClick={act(() => app.newManual())}>אירוע ידני</Item>
+ <Link role="menuitem" to="/work" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 hover:bg-soft"><Icon name="spark" size={18} />מסך עבודה</Link>
           <Link role="menuitem" to="/welcome" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 hover:bg-soft"><Icon name="sun" size={18} />השראה להיום</Link>
           <div className="px-3 pb-1 pt-3 text-xs text-mute">מערכת</div>
           <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 hover:bg-soft">

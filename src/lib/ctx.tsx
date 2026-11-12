@@ -1,11 +1,15 @@
 import { createContext, useContext } from 'react'
 import type { useEvents } from '../hooks/useEvents'
 import type { useCategories } from '../hooks/useCategories'
+import type { useQuickLinks } from '../hooks/useQuickLinks'
+import type { EventDraft } from '../types'
 
 // הקשר משותף: האירועים ופעולות ההעלאה שתפריט ה-AI ודף הבית משתמשים בהן
 export interface AppCtx {
   ev: ReturnType<typeof useEvents>
   cats: ReturnType<typeof useCategories>
+  links: ReturnType<typeof useQuickLinks>
+  reviewDraft: (d: EventDraft) => void
   pickFile: () => void
   openPaste: () => void
   newManual: (date?: string) => void

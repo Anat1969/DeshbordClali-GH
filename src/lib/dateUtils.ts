@@ -75,8 +75,8 @@ export function relativeDays(iso: string): string {
 // ---- תצוגות מתגלגלות: "היום" תמיד באמצע ----
 export type ViewMode = 'day' | 'week' | 'month' | 'bimonth' | 'quarter'
 export const VIEW_LABEL: Record<ViewMode, string> = { day: 'יום', week: 'שבוע', month: 'חודש', bimonth: 'חודשיים', quarter: '3 חודשים' }
-// כמה ימים לכל צד של היום: 3 ימים, 7 ימים, 5 שבועות, 9 שבועות, 13 שבועות
-export const VIEW_RADIUS: Record<ViewMode, number> = { day: 1, week: 3, month: 17, bimonth: 31, quarter: 45 }
+// כמה שבועות (שורות) בכל תצוגה. השבוע מתחיל ביום ראשון, ושורת היום תמיד באמצע
+export const VIEW_ROWS: Record<ViewMode, number> = { day: 0, week: 1, month: 5, bimonth: 9, quarter: 13 }
 export const VIEW_STEP: Record<ViewMode, number> = { day: 1, week: 7, month: 35, bimonth: 63, quarter: 91 }
 export const HE_DAYS_FULL = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
 
@@ -91,10 +91,12 @@ export const weekdayOf = (iso: string) => {
   return new Date(Date.UTC(y, m, d)).getUTCDay()
 }
 
-// כל הימים בחלון, כשהעוגן (ברירת מחדל: היום) במרכז
+// כל הימים בחלון. יום: אתמול, היום ומחר. אחרת שבועות שלמים מיום ראשון, כששבוע העוגן (היום) בשורה האמצעית
 export function windowDays(anchor: string, mode: ViewMode): string[] {
-  const r = VIEW_RADIUS[mode]
-  return Array.from({ length: 2 * r + 1 }, (_, i) => addDays(anchor, i - r))
+  if (mode === 'day') return [addDays(anchor, -1), anchor, addDays(anchor, 1)]
+  const rows = VIEW_ROWS[mode]
+  const start = addDays(addDays(anchor, -weekdayOf(anchor)), -7 * ((rows - 1) / 2))
+  return Array.from({ length: rows * 7 }, (_, i) => addDays(start, i))
 }
 
 // טווח לכותרת: "9 עד 15 בנובמבר 2026" או "29 באוקטובר עד 4 בנובמבר 2026"

@@ -91,5 +91,18 @@ Deno.serve(async (req) => {
 
   const settled = await Promise.allSettled(tasks)
   const cards = settled.flatMap((s) => (s.status === 'fulfilled' && s.value ? [s.value] : []))
-  return json({ date: today, cards })
+
+  // האפליקציה שממנה בא כל כרטיס: שם, תמונת שער (כאייקון) וקישור, מתיק האפליקציות
+  const APPS: Record<string, string> = {
+    power: 'מושגי תרבות', insight: 'מושגי תרבות', train: `מבחן דפ"ר, עילאי`, exercise: `מגזין "מהות" תובנות אישיות`,
+    news: 'רדאר אקטואליה', song: 'שיר ביום', distilled: 'זיקוק DNA', word: `אימון - "נקודות מבט"`,
+  }
+  const info = new Map<string, { name: string; cover: string | null; url: string | null }>()
+  await Promise.all([...new Set(Object.values(APPS))].map(async (name) => {
+    const { data } = await sb.from('aoa_apps').select('data').filter('data->>name', 'eq', name).limit(1)
+    const d = data?.[0]?.data
+    if (d) info.set(name, { name, cover: d.coverImage ?? null, url: d.vercelUrl ?? d.previewUrl ?? d.websiteUrl ?? null })
+  }))
+  const withApp = cards.map((c) => ({ ...c, app: info.get(APPS[String(c.kind)]) ?? { name: String(c.source), cover: null, url: null } }))
+  return json({ date: today, cards: withApp })
 })
