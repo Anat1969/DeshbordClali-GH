@@ -9,7 +9,7 @@ export interface AppCtx {
   newManual: () => void
   fromFile: (f: File) => void
   signOut: () => void
-  email: string | null
+  account: string | null
   toast: (msg: string) => void
 }
 

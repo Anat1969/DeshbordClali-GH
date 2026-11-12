@@ -55,7 +55,7 @@ export default function AIMenu() {
           <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className="block min-h-11 rounded-md px-3 py-2.5 hover:bg-soft">
             הגדרות ווצאפ
           </Link>
-          {app.email !== null && <Item onClick={act(app.signOut)}>יציאה</Item>}
+          {app.account !== null && <Item onClick={act(app.signOut)}>יציאה מהמכשיר הזה</Item>}
         </div>
       )}
     </div>

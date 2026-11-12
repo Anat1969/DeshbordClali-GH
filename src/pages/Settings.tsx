@@ -4,6 +4,7 @@ import { useApp } from '../lib/ctx'
 import { getProfile, saveProfile } from '../lib/store'
 import { normalizePhone, sendTestMessage } from '../lib/whatsapp'
 import { demoMode } from '../lib/supabase'
+import { api, privateLink, setKey } from '../lib/api'
 
 // הגדרות: מספר ווצאפ (נשמר אוטומטית), בדיקת שליחה, חשבון
 export default function Settings() {
@@ -80,9 +81,30 @@ export default function Settings() {
         ב-sandbox של Twilio צריך קודם לשלוח מהווצאפ את קוד ההצטרפות למספר של Twilio. בלי זה ההודעה לא תגיע.
       </p>
 
-      <h2 className="mb-2 mt-10 text-xl font-light">חשבון</h2>
-      <p className="text-mute">{app.email ?? 'מצב הדגמה: אין התחברות, הנתונים נשמרים בדפדפן הזה.'}</p>
-      {app.email !== null && <button type="button" className="btn mt-3" onClick={app.signOut}>יציאה</button>}
+      <h2 className="mb-2 mt-10 text-xl font-light">גישה למכשירים נוספים</h2>
+      {demoMode ? (
+        <p className="text-mute">מצב הדגמה: אין התחברות, הנתונים נשמרים בדפדפן הזה.</p>
+      ) : (
+        <>
+          <p className="text-mute">כדי לפתוח את היומן בטלפון או במחשב אחר, מעתיקים את הקישור הפרטי ופותחים אותו שם. מי שיש לו את הקישור רואה את היומן, ולכן לא משתפים אותו.</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <button type="button" className="btn" onClick={() => navigator.clipboard.writeText(privateLink()).then(() => app.toast('הקישור הועתק'))}>העתקת הקישור הפרטי</button>
+            <button
+              type="button"
+              className="btn"
+              onClick={async () => {
+                if (!window.confirm('המפתח הישן יפסיק לעבוד בכל המכשירים. להמשיך?')) return
+                const { key } = await api<{ key: string }>('rotate')
+                setKey(key)
+                app.toast('המפתח הוחלף. העתיקי את הקישור החדש')
+              }}
+            >
+              החלפת מפתח
+            </button>
+            <button type="button" className="btn" onClick={app.signOut}>יציאה מהמכשיר הזה</button>
+          </div>
+        </>
+      )}
     </div>
   )
 }
