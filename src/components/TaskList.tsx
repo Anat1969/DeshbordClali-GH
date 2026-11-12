@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTasks } from '../hooks/useTasks'
 import { useSpeech } from '../hooks/useSpeech'
 import { useApp } from '../lib/ctx'
@@ -38,7 +38,7 @@ export default function TaskList() {
   }
 
   return (
-    <section aria-label="רשימת משימות" className="flex min-h-0 flex-col rounded-lg bg-soft/60 p-3.5">
+    <section aria-label="רשימת משימות" className="flex min-h-0 flex-col rounded-lg bg-soft/60 p-3.5 lg:flex-1">
       <div className="mb-3 flex items-baseline justify-between">
         <h2 className="text-lg font-light">משימות</h2>
         <span className="text-sm text-mute">
@@ -73,7 +73,7 @@ export default function TaskList() {
         </p>
       )}
 
-      <ul className="m-0 mt-3 flex max-h-[420px] min-h-0 list-none flex-col gap-2 overflow-auto p-0">
+      <ul className="m-0 mt-3 flex max-h-[420px] min-h-0 list-none flex-col gap-2 overflow-auto p-0 lg:max-h-none lg:flex-1">
         {loading && <li className="skeleton h-12" />}
         {!loading && shown.length === 0 && (
           <li className="rounded-lg bg-white p-3 text-sm text-mute">
@@ -96,6 +96,13 @@ function TaskRow({ task, onPatch, onRemove }: { task: Task; onPatch: (id: string
   const [confirmDel, setConfirmDel] = useState(false)
   const speech = useSpeech((t) => setNote((v) => (v + ' ' + t).trim()))
 
+  // לחיצה ראשונה על X מסמנת למחיקה, ואם לא לוחצים שוב תוך 3 שניות היא מתבטלת
+  useEffect(() => {
+    if (!confirmDel) return
+    const t = window.setTimeout(() => setConfirmDel(false), 3000)
+    return () => window.clearTimeout(t)
+  }, [confirmDel])
+
   const run = (fn: () => Promise<void>) => fn().catch(() => app.toast('הפעולה נכשלה, השינוי בוטל'))
 
   const saveNote = async () => {
@@ -116,15 +123,35 @@ function TaskRow({ task, onPatch, onRemove }: { task: Task; onPatch: (id: string
           aria-label={`סימון כבוצע: ${task.text}`}
           onChange={(e) => run(() => onPatch(task.id, { done: e.target.checked }))}
         />
-        {/* משימה פתוחה: שחור ובולט. משימה שבוצעה: קו חוצה ואפור */}
-        <span className={`min-w-0 flex-1 break-words ${task.done ? 'text-mute line-through decoration-2' : 'font-semibold text-[#111111]'}`}>{task.text}</span>
+        <div className="min-w-0 flex-1">
+          {/* משימה פתוחה: שחור ובולט. משימה שבוצעה: קו חוצה ואפור */}
+          <span className={`block break-words ${task.done ? 'text-mute line-through decoration-2' : 'font-semibold text-[#111111]'}`}>{task.text}</span>
+          {formatCreated(task.created_at) && (
+            <p className="mt-0.5 flex items-center gap-1 text-xs text-mute">
+              <Icon name="clock" size={12} />
+              {formatCreated(task.created_at)}
+            </p>
+          )}
+        </div>
+        {/* הערה ומחיקה: אייקונים בצד שמאל של השורה, כדי לפנות מקום לטקסט */}
+        <div className="flex shrink-0 items-center">
+          <IconButton
+            name="note"
+            label={noteOpen ? 'סגירת הערה' : task.note ? 'עריכת הערה' : 'הוספת הערה'}
+            size={16}
+            className={`!h-8 !w-8 ${noteOpen || task.note ? '!bg-[#E8ECF4] !text-navy' : ''}`}
+            onClick={() => (noteOpen ? saveNote().then(() => setNoteOpen(false)) : setNoteOpen(true))}
+          />
+          <IconButton
+            name="x"
+            label={confirmDel ? 'לחצי שוב למחיקה' : 'מחיקת המשימה'}
+            tone="danger"
+            size={16}
+            className={`!h-8 !w-8 ${confirmDel ? '!bg-bad !text-white' : ''}`}
+            onClick={() => (confirmDel ? run(() => onRemove(task.id)) : setConfirmDel(true))}
+          />
+        </div>
       </div>
-      {formatCreated(task.created_at) && (
-        <p className="ms-8 mt-0.5 flex items-center gap-1 text-xs text-mute">
-          <Icon name="clock" size={12} />
-          {formatCreated(task.created_at)}
-        </p>
-      )}
 
       {task.note && !noteOpen && <p className="ms-8 mt-1 whitespace-pre-wrap break-words text-sm text-mute">{task.note}</p>}
 
@@ -132,23 +159,9 @@ function TaskRow({ task, onPatch, onRemove }: { task: Task; onPatch: (id: string
         <div className="ms-8 mt-2">
           <textarea className="field resize-none" rows={3} value={note} aria-label="הערה למשימה" placeholder="הערה" onChange={(e) => setNote(e.target.value)} onBlur={saveNote} />
           <VoiceButton speech={speech} className="mt-2" />
-          <div className="mt-1 flex items-center gap-3 text-sm">
-            {saved && <span className="text-good">נשמר</span>}
-          </div>
+          {saved && <p className="mt-1 text-sm text-good">נשמר</p>}
         </div>
       )}
-
-      <div className="ms-8 mt-2 flex items-center gap-4 text-sm">
-        <button type="button" className="inline-flex items-center gap-1.5 text-navy underline underline-offset-4" onClick={() => (noteOpen ? saveNote().then(() => setNoteOpen(false)) : setNoteOpen(true))}>
-          <Icon name="note" size={14} />
-          {noteOpen ? 'סגירת הערה' : task.note ? 'עריכת הערה' : 'הוספת הערה'}
-        </button>
-        {confirmDel ? (
-          <button type="button" className="font-semibold text-bad underline underline-offset-4" onClick={() => run(() => onRemove(task.id))}>בטוחה? מחיקה</button>
-        ) : (
-          <IconButton name="x" label="מחיקת המשימה" tone="danger" size={16} className="!h-7 !w-7" onClick={() => setConfirmDel(true)} />
-        )}
-      </div>
     </li>
   )
 }

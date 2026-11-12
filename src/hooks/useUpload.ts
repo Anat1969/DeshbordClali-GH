@@ -38,11 +38,17 @@ export function useUpload(names: CatNames) {
     setStage('review')
   }
 
+  // פתיחת טיוטה קיימת (למשל ממסך העבודה) לבדיקה ושמירה
+  const review = (d: EventDraft) => {
+    setDraft(d)
+    setStage('review')
+  }
+
   const reset = () => {
     setStage('idle')
     setDraft(null)
     setError(null)
   }
 
-  return { stage, step, draft, error, fromFile: (file: File) => run({ file }), fromText: (text: string) => run({ text }), manual, reset }
+  return { stage, step, draft, error, fromFile: (file: File) => run({ file }), fromText: (text: string) => run({ text }), manual, review, reset }
 }

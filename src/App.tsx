@@ -15,6 +15,8 @@ import { useAccess } from './hooks/useAccess'
 import { useEvents } from './hooks/useEvents'
 import { useUpload } from './hooks/useUpload'
 import { useCategories } from './hooks/useCategories'
+import { useQuickLinks } from './hooks/useQuickLinks'
+import Work from './pages/Work'
 import { demoMode } from './lib/supabase'
 
 export default function App() {
@@ -22,6 +24,7 @@ export default function App() {
   const authed = access.allowed
   const ev = useEvents(authed)
   const cats = useCategories(authed)
+  const links = useQuickLinks(authed)
   const up = useUpload(cats.names)
   const fileInput = useRef<HTMLInputElement>(null)
   const [paste, setPaste] = useState<false | 'text' | 'voice'>(false)
@@ -60,6 +63,8 @@ export default function App() {
         value={{
           ev,
           cats,
+          links,
+          reviewDraft: up.review,
           pickFile: () => fileInput.current?.click(),
           openPaste: () => setPaste('text'),
           openVoice: () => setPaste('voice'),
@@ -77,6 +82,7 @@ export default function App() {
               {/* בפעם הראשונה בכל יום נפתח דף ההשראה */}
               <Route path="/" element={seenToday() ? <Home uploading={up.stage === 'working'} step={up.step} /> : <Navigate to="/welcome" replace />} />
               <Route path="/welcome" element={<Welcome />} />
+              <Route path="/work" element={<Work />} />
               <Route path="/event/:id" element={<EventDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<p className="p-8">הדף לא נמצא. אפשר לחזור ליומן דרך שם האפליקציה למעלה.</p>} />

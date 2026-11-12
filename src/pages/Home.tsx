@@ -3,7 +3,9 @@ import CalendarMonthView from '../components/CalendarMonthView'
 import EventCard from '../components/EventCard'
 import EventModal from '../components/EventModal'
 import UploadZone from '../components/UploadZone'
-import { IconButton } from '../components/Icon'
+import Icon, { IconButton } from '../components/Icon'
+import QuickLinks from '../components/QuickLinks'
+import { Link } from 'react-router-dom'
 import { useApp } from '../lib/ctx'
 import TaskList from '../components/TaskList'
 import { VIEW_STEP, addDays, daysUntil, formatLong, formatShort, formatTime, relativeDays, todayIso, type ViewMode } from '../lib/dateUtils'
@@ -18,7 +20,7 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
   const [mode, setModeState] = useState<ViewMode>(() => {
     try {
       const m = localStorage.getItem('yoman_view_v1')
-      return m === 'day' || m === 'week' || m === 'month' || m === 'quarter' ? m : 'month'
+      return m === 'day' || m === 'week' || m === 'month' || m === 'bimonth' || m === 'quarter' ? m : 'month'
     } catch {
       return 'month'
     }
@@ -74,8 +76,15 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
         </div>
       )}
 
-      <div className="flex flex-1 flex-col gap-6 lg:min-h-0 lg:flex-row">
-        <div className="flex min-h-[420px] flex-1 flex-col lg:min-h-0">
+      {/* קישורים חשובים ומסך עבודה */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <QuickLinks />
+        <Link to="/work" className="btn gap-2 text-navy"><Icon name="spark" size={18} />מסך עבודה</Link>
+      </div>
+
+      {/* יחס שני שלישים ליומן ושליש למשימות */}
+      <div className="flex flex-1 flex-col gap-6 lg:grid lg:min-h-0 lg:grid-cols-3 lg:grid-rows-[minmax(0,1fr)]">
+        <div className="flex min-h-[420px] flex-1 flex-col lg:col-span-2 lg:min-h-0">
           {loading ? (
             <div className="skeleton flex-1" />
           ) : (
@@ -97,7 +106,7 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
           )}
         </div>
 
-        <aside className="flex w-full shrink-0 flex-col gap-5 lg:min-h-0 lg:w-[380px] lg:overflow-auto">
+        <aside className="flex w-full shrink-0 flex-col gap-4 lg:col-span-1 lg:min-h-0 lg:overflow-auto">
           <UploadZone onFile={app.fromFile} onPaste={app.openPaste} onPick={app.pickFile} onVoice={app.openVoice} busy={uploading} step={step} />
           <section aria-label="אירועי היום שנבחר">
             <div className="mb-3 flex items-center justify-between gap-2">

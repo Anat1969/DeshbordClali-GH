@@ -41,10 +41,9 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
   const today = todayIso()
   const isGrid = mode === 'month' || mode === 'bimonth' || mode === 'quarter'
   const rows = Math.ceil(days.length / 7)
-  const firstDow = weekdayOf(days[0])
-  // כותרות ימי השבוע מתחילות מיום השבוע של התא הראשון, כך שהיום תמיד בעמודה האמצעית
-  const heads = Array.from({ length: 7 }, (_, i) => (firstDow + i) % 7)
-  const centerCol = 3
+  // ימי השבוע תמיד מיום ראשון. העמודה של היום מסומנת
+  const heads = [0, 1, 2, 3, 4, 5, 6]
+  const todayDow = weekdayOf(today)
   const monthOf = (iso: string) => iso.slice(0, 7)
   const dense = mode === 'quarter' || mode === 'bimonth'
 
@@ -186,10 +185,10 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
         {mode !== 'day' && (
           <div role="row" className={`grid-cols-7 pb-1.5 text-center ${mode === 'week' ? 'hidden sm:grid' : 'grid'}`}>
             {heads.map((dow, i) => (
-              <div key={i} role="columnheader" className={`text-lg font-semibold sm:text-xl ${i === centerCol ? 'text-ink' : dow === 5 || dow === 6 ? 'text-mute' : 'text-ink'}`}>
+              <div key={i} role="columnheader" className={`text-lg font-semibold sm:text-xl ${dow === todayDow ? 'text-ink' : dow === 5 || dow === 6 ? 'text-mute' : 'text-ink'}`}>
                 <span className="sm:hidden">{HE_DAYS_SHORT[dow]}</span>
                 <span className="hidden sm:inline">{HE_DAYS_FULL[dow]}</span>
-                {i === centerCol && <span className="block h-1 rounded bg-[#111111]" aria-hidden="true" />}
+                {dow === todayDow && <span className="block h-1 rounded bg-[#111111]" aria-hidden="true" />}
               </div>
             ))}
           </div>

@@ -15,13 +15,15 @@ export interface InspireCard {
   options?: string[]
   correct?: number
   explanation?: string
+  // האפליקציה שממנה בא הכרטיס: שם, תמונת שער (כאייקון) וקישור
+  app?: { name: string; cover: string | null; url: string | null }
 }
 
-const LS_CACHE = 'yoman_inspire_v1'
+const LS_CACHE = 'yoman_inspire_v2'
 const LS_SEEN = 'yoman_welcome_day_v1'
 
-// התאריך המקומי בישראל, YYYY-MM-DD
-export const dayKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date())
+// התאריך המקומי בישראל, YYYY-MM-DD. בלי ארגומנט: היום. עם חותמת זמן: היום שבו היא נרשמה
+export const dayKey = (iso?: string) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(iso ? new Date(iso) : new Date())
 
 export const seenToday = () => {
   try { return localStorage.getItem(LS_SEEN) === dayKey() } catch { return true }
