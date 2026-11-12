@@ -8,12 +8,6 @@ import { createTask } from '../lib/tasks'
 import { getContacts, gmailUrl, interpret, saveContacts, whatsappUrl, type Contact, type WorkAction } from '../lib/work'
 import { emptyDraft } from '../types'
 
-const EXAMPLES = [
-  'שלח מייל לאבישג ששואל לשלומה',
-  'קבע תור לרופא שיניים ביום ראשון בעשר בבוקר',
-  'הוסף משימה: להזמין שולחן במסעדה',
-  'שלח לדנה הודעת ווצאפ שאני מאחרת בחצי שעה',
-]
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 // מסך עבודה: כותבים (או אומרים) מה לעשות, והמערכת מכינה את הפעולה לאישור: מייל ב-Gmail, אירוע, משימה, ווצאפ
@@ -67,7 +61,7 @@ export default function Work() {
         className="field resize-none text-lg"
         rows={3}
         value={cmd}
-        placeholder="למשל: שלח מייל לאבישג ששואל לשלומה"
+        placeholder="מה לעשות?"
         aria-label="מה לעשות"
         onChange={(e) => setCmd(e.target.value)}
         onKeyDown={(e) => (e.ctrlKey || e.metaKey) && e.key === 'Enter' && run()}
@@ -78,11 +72,6 @@ export default function Work() {
           <Icon name="send" size={18} />
           {busy ? 'מכין...' : 'ביצוע'}
         </button>
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2" aria-label="דוגמאות">
-        {EXAMPLES.map((x) => (
-          <button key={x} type="button" className="rounded-lg bg-soft px-3 py-1.5 text-sm hover:bg-[#E9EBEF]" onClick={() => setCmd(x)}>{x}</button>
-        ))}
       </div>
 
       {err && <p className="mt-5 rounded-lg bg-[#FBECEA] p-3 text-bad" role="alert">{err}</p>}

@@ -12,7 +12,8 @@ const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString
 const sha256 = async (s: string) => hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))
 const str = (v: unknown, n: number) => String(v ?? '').trim().slice(0, n)
 
-const COLS = 'id,name,status,progress,next_step,due_date,note,milestones,created_at,updated_at'
+const COLS = 'id,name,status,progress,next_step,due_date,note,milestones,contact_name,contact_email,created_at,updated_at'
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const STATUSES = ['planning', 'active', 'waiting', 'done']
 const DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -25,6 +26,8 @@ function pick(p: Record<string, any>): Record<string, unknown> {
   if ('next_step' in p) out.next_step = str(p.next_step, 300) || null
   if ('due_date' in p) out.due_date = DATE.test(str(p.due_date, 10)) ? str(p.due_date, 10) : null
   if ('note' in p) out.note = str(p.note, 2000) || null
+  if ('contact_name' in p) out.contact_name = str(p.contact_name, 80) || null
+  if ('contact_email' in p) out.contact_email = EMAIL.test(str(p.contact_email, 120)) ? str(p.contact_email, 120) : null
   if ('milestones' in p) {
     out.milestones = (Array.isArray(p.milestones) ? p.milestones : []).slice(0, 40)
       .map((m: any) => ({ id: str(m?.id, 40) || crypto.randomUUID(), name: str(m?.name, 120), date: str(m?.date, 10), done: m?.done === true }))

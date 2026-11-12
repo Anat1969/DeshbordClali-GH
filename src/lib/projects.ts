@@ -20,10 +20,12 @@ export interface Project {
   due_date: string | null
   note: string | null
   milestones: Milestone[]
+  contact_name: string | null
+  contact_email: string | null
   created_at: string
   updated_at: string
 }
-export type ProjectPatch = Partial<Pick<Project, 'name' | 'status' | 'progress' | 'next_step' | 'due_date' | 'note' | 'milestones'>>
+export type ProjectPatch = Partial<Pick<Project, 'name' | 'status' | 'progress' | 'next_step' | 'due_date' | 'note' | 'milestones' | 'contact_name' | 'contact_email'>>
 
 export const STATUS_LABEL: Record<ProjectStatus, string> = { planning: 'תכנון', active: 'בביצוע', waiting: 'ממתין', done: 'הושלם' }
 
@@ -45,13 +47,13 @@ const write = (l: Project[]) => { try { localStorage.setItem(LS, JSON.stringify(
 
 export async function listProjects(): Promise<Project[]> {
   const l = supabase ? (await api<{ projects: Project[] }>('list', {}, F)).projects : read()
-  return l.map((p) => ({ ...p, milestones: p.milestones ?? [] }))
+  return l.map((p) => ({ ...p, milestones: p.milestones ?? [], contact_name: p.contact_name ?? null, contact_email: p.contact_email ?? null }))
 }
 
 export async function createProject(name: string): Promise<Project> {
   if (!supabase) {
     const now = new Date().toISOString()
-    const p: Project = { id: crypto.randomUUID(), name, status: 'active', progress: 0, next_step: null, due_date: null, note: null, milestones: [], created_at: now, updated_at: now }
+    const p: Project = { id: crypto.randomUUID(), name, status: 'active', progress: 0, next_step: null, due_date: null, note: null, milestones: [], contact_name: null, contact_email: null, created_at: now, updated_at: now }
     write([p, ...read()])
     return p
   }

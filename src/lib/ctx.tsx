@@ -14,7 +14,7 @@ export interface AppCtx {
   reviewDraft: (d: EventDraft) => void
   pickFile: () => void
   openPaste: () => void
-  newManual: (date?: string) => void
+  newManual: (date?: string, time?: string) => void
   openVoice: () => void
   fromFile: (f: File) => void
   signOut: () => void

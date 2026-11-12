@@ -107,6 +107,7 @@ function TaskRow({ task, onPatch, onRemove, docs }: { task: Task; onPatch: (id: 
   const [lname, setLname] = useState('')
   const [lurl, setLurl] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const [drag, setDrag] = useState(false)
   const speech = useSpeech((t) => setNote((v) => (v + ' ' + t).trim()))
 
   // לחיצה ראשונה על X מסמנת למחיקה, ואם לא לוחצים שוב תוך 3 שניות היא מתבטלת
@@ -126,6 +127,24 @@ function TaskRow({ task, onPatch, onRemove, docs }: { task: Task; onPatch: (id: 
     if (!f) return
     if (f.size > MAX_DOC_BYTES) return app.toast('הקובץ גדול מ-10MB.')
     guard(() => docs.addFile(task.id, f))
+  }
+  // כלל: העלאה היא תמיד גם לחיצה, גם הדבקה וגם גרירה
+  const onPaste = (e: React.ClipboardEvent) => {
+    const f = Array.from(e.clipboardData.files)[0]
+    if (f) { e.preventDefault(); return pickFile(f) }
+    const t = e.clipboardData.getData('text').trim()
+    if (/^https?:\/\/\S+$/i.test(t) && (e.target as HTMLElement).tagName !== 'INPUT') {
+      e.preventDefault()
+      guard(() => docs.addLink(task.id, '', t))
+    }
+  }
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDrag(false)
+    const f = e.dataTransfer.files[0]
+    if (f) return pickFile(f)
+    const u = (e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text')).trim()
+    if (/^https?:\/\/\S+$/i.test(u)) guard(() => docs.addLink(task.id, '', u))
   }
   const submitLink = () => {
     if (!lurl.trim()) return
@@ -196,10 +215,17 @@ function TaskRow({ task, onPatch, onRemove, docs }: { task: Task; onPatch: (id: 
       </div>
 
       {docsOpen && (
-        <div className="ms-8 mt-2 rounded-lg bg-soft/70 p-2.5">
+        <div
+          className={`ms-8 mt-2 rounded-lg p-2.5 outline-dashed outline-2 -outline-offset-2 ${drag ? 'bg-[#E8ECF4] outline-navy' : 'bg-soft/70 outline-transparent'}`}
+          tabIndex={0}
+          onPaste={onPaste}
+          onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
+          onDragLeave={() => setDrag(false)}
+          onDrop={onDrop}
+        >
           <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold"><Icon name="paperclip" size={14} />חומר לביצוע המשימה</p>
           {task.docs.length === 0 ? (
-            <p className="text-sm text-mute">אין מסמכים. הוסיפי קובץ או קישור עם החומר שצריך כדי לבצע.</p>
+            <p className="text-sm text-mute">אין מסמכים. גרירה, הדבקה או לחיצה: קובץ או קישור עם החומר שצריך כדי לבצע.</p>
           ) : (
             <ul className="m-0 grid list-none gap-1.5 p-0">
               {task.docs.map((d) => (

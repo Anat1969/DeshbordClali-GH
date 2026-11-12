@@ -103,14 +103,42 @@ Deno.serve(async (req) => {
 
   const profile = async () => (await sb.from('yoman_profiles').select('contacts,links').eq('owner_hash', owner).maybeSingle()).data
 
+  // היסטוריה: לפני כל שמירה נשמר עותק של הגרסה הקודמת (30 אחרונות לכל סוג), כדי שאף דריסה לא תאבד מידע
+  const snapshot = async (kind: 'links' | 'contacts', data: unknown) => {
+    if (!Array.isArray(data) || data.length === 0) return
+    await sb.from('yoman_history').insert({ owner_hash: owner, kind, data })
+    const { data: old } = await sb.from('yoman_history').select('id').eq('owner_hash', owner).eq('kind', kind).order('created_at', { ascending: false }).range(30, 300)
+    if (old?.length) await sb.from('yoman_history').delete().in('id', old.map((o: { id: number }) => o.id))
+  }
+  const cleanContacts = (v: unknown): Contact[] => (Array.isArray(v) ? v : []).slice(0, 200).map((c: any) => ({ name: str(c?.name, 60), email: EMAIL.test(str(c?.email, 120)) ? str(c.email, 120) : '', phone: str(c?.phone, 20) })).filter((c: Contact) => c.name)
+
   switch (b.action) {
     case 'contacts_get':
       return json({ contacts: (await profile())?.contacts ?? [] })
 
     case 'contacts_set': {
-      const list: Contact[] = (Array.isArray(b.contacts) ? b.contacts : []).slice(0, 200).map((c: any) => ({ name: str(c?.name, 60), email: EMAIL.test(str(c?.email, 120)) ? str(c.email, 120) : '', phone: str(c?.phone, 20) })).filter((c: Contact) => c.name)
+      const list = cleanContacts(b.contacts)
+      await snapshot('contacts', (await profile())?.contacts)
       const { error } = await sb.from('yoman_profiles').upsert({ owner_hash: owner, contacts: list })
       return error ? json({ error: error.message }, 500) : json({ ok: true })
+    }
+
+    // מיזוג: מוסיף אנשי קשר חדשים (לפי כתובת מייל) בלי לדרוס או למחוק את הקיימים. משמש לייבוא
+    case 'contacts_merge': {
+      const cur = cleanContacts((await profile())?.contacts)
+      const merged = [...cur]
+      const emails = new Set(cur.filter((c) => c.email).map((c) => c.email.toLowerCase()))
+      let added = 0
+      for (const c of cleanContacts(b.contacts)) {
+        if (c.email ? emails.has(c.email.toLowerCase()) : merged.some((x) => x.name === c.name)) continue
+        if (merged.length >= 200) break
+        merged.push(c)
+        if (c.email) emails.add(c.email.toLowerCase())
+        added++
+      }
+      await snapshot('contacts', cur)
+      const { error } = await sb.from('yoman_profiles').upsert({ owner_hash: owner, contacts: merged })
+      return error ? json({ error: error.message }, 500) : json({ ok: true, added, total: merged.length })
     }
 
     case 'links_get':
@@ -118,6 +146,7 @@ Deno.serve(async (req) => {
 
     case 'links_set': {
       const list = (Array.isArray(b.links) ? b.links : []).slice(0, 30).map((l: any) => ({ name: str(l?.name, 40), url: str(l?.url, 500) })).filter((l: { name: string; url: string }) => l.name && /^https?:\/\//i.test(l.url))
+      await snapshot('links', (await profile())?.links)
       const { error } = await sb.from('yoman_profiles').upsert({ owner_hash: owner, links: list })
       return error ? json({ error: error.message }, 500) : json({ ok: true })
     }
