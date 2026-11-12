@@ -105,3 +105,10 @@ export function formatRange(a: string, b: string): string {
   if (x.y === z.y) return `${x.d} ב${HE_MONTHS[x.m]} עד ${z.d} ב${HE_MONTHS[z.m]} ${z.y}`
   return `${x.d} ב${HE_MONTHS[x.m]} ${x.y} עד ${z.d} ב${HE_MONTHS[z.m]} ${z.y}`
 }
+
+// מתי נרשמה משימה: יום, תאריך ושעה לפי שעון ישראל
+export function formatCreated(iso: string): string {
+  const d = new Date(iso)
+  if (!iso || isNaN(d.getTime())) return ''
+  return new Intl.DateTimeFormat('he-IL', { weekday: 'long', day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Jerusalem' }).format(d)
+}

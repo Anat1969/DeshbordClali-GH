@@ -96,7 +96,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
         onClick={() => onSelect(iso)}
         onDoubleClick={() => onAdd(iso)}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(iso))}
-        className={`group flex min-h-12 cursor-pointer flex-col p-1.5 transition-colors ${big ? 'rounded-lg border sm:p-2.5' : ''}`}
+        className={`group flex min-h-12 min-w-0 cursor-pointer flex-col p-1.5 transition-colors ${big ? 'rounded-lg border sm:p-2.5' : ''}`}
       >
         <div className={`flex gap-1 ${big ? 'items-start justify-between' : 'flex-col items-center sm:flex-row sm:items-start sm:justify-between'}`}>
           <span className={`num text-sm ${big ? 'text-base sm:text-lg' : ''} ${isToday ? 'font-semibold' : iso < today && !isSel ? 'text-mute' : ''}`}>{label}</span>
@@ -121,9 +121,9 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
         </div>
         {isToday && big && <span className="mt-0.5 text-xs font-semibold">היום</span>}
 
-        {mode !== 'quarter' && mode !== 'bimonth' && (
-          <div className={`mt-1 min-h-0 flex-col gap-1 overflow-hidden ${big ? 'flex' : 'hidden sm:flex'}`}>
-            {(big ? list : list.slice(0, 2)).map((e) => {
+        {mode !== 'quarter' && (
+          <div className={`mt-1 flex-col gap-1 ${big ? 'flex' : 'hidden sm:flex'}`}>
+            {list.map((e) => {
               const sl = slotOf(e.category)
               const isNext = e.id === nextId
               return (
@@ -136,15 +136,14 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
                   }}
                   onDoubleClick={(ev) => ev.stopPropagation()}
                   style={{ background: sl?.color ?? '#1A2B4A', color: sl?.fg ?? '#FFFFFF', boxShadow: isNext ? '0 0 0 3px #FFE066' : undefined }}
-                  className={`flex items-start gap-1.5 rounded-md px-1.5 py-0.5 text-right text-xs hover:opacity-85 ${big ? 'sm:text-sm' : ''} ${flashId === e.id ? 'flash' : ''}`}
+                  className={`flex items-start gap-1.5 rounded-md px-1.5 py-1 text-right text-xs leading-snug hover:opacity-85 sm:text-sm ${flashId === e.id ? 'flash' : ''}`}
                   title={e.title}
                 >
                   {e.event_time && <span className="num shrink-0 opacity-80">{e.event_time.slice(0, 5)}</span>}
-                  <span className={big ? 'break-words' : 'truncate'}>{e.title}</span>
+                  <span className="min-w-0 break-words">{e.title}</span>
                 </button>
               )
             })}
-            {!big && list.length > 2 && <span className="text-xs text-mute">ועוד {list.length - 2}</span>}
           </div>
         )}
       </div>
@@ -172,14 +171,14 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
 
       {/* הקודם והבא במקום קבוע, באותו רוחב */}
       <div className="mb-3 grid grid-cols-[72px_minmax(0,1fr)_72px] items-center gap-2 sm:grid-cols-[88px_minmax(0,1fr)_88px]">
-        <button type="button" className="btn" onClick={onPrev}>הקודם</button>
+        <button type="button" className="btn" aria-label="הקודם" title="הקודם" onClick={onPrev}><Icon name="chevronR" size={24} /></button>
         <div className="flex flex-col items-center">
           <h2 className="text-center text-sm font-light leading-tight sm:whitespace-nowrap sm:text-2xl">
             <span className="num">{formatRange(days[0], days[days.length - 1])}</span>
           </h2>
-          <button type="button" className="text-sm text-navy underline underline-offset-4" onClick={onToday}>חזרה להיום</button>
+          <button type="button" className="inline-flex items-center gap-1 text-sm text-navy underline underline-offset-4" onClick={onToday}><Icon name="target" size={14} />חזרה להיום</button>
         </div>
-        <button type="button" className="btn" onClick={onNext}>הבא</button>
+        <button type="button" className="btn" aria-label="הבא" title="הבא" onClick={onNext}><Icon name="chevronL" size={24} /></button>
       </div>
 
       <div role="grid" className="flex min-h-0 flex-1 flex-col">
@@ -211,7 +210,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
         {isGrid && (
           <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-auto">
             {Array.from({ length: rows }, (_, r) => (
-              <div key={r} className="grid shrink-0 grid-cols-7 overflow-hidden rounded-lg" style={{ border: `2px solid ${WEEK_FRAME}`, flex: `1 0 ${minRow}px` }}>
+              <div key={r} className="grid shrink-0 grid-cols-7 overflow-clip rounded-lg" style={{ border: `2px solid ${WEEK_FRAME}`, flex: `1 0 ${minRow}px` }}>
                 {days.slice(r * 7, r * 7 + 7).map((iso, c) => cell(iso, r * 7 + c))}
               </div>
             ))}
