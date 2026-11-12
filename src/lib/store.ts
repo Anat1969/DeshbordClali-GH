@@ -1,17 +1,20 @@
 import { supabase, demoMode } from './supabase'
 import { api } from './api'
 import type { CalEvent, EventDraft, Profile } from '../types'
+import { mergeNames, type CatNames } from './categories'
 import { toIso } from './dateUtils'
 
 // שכבת נתונים אחת: Supabase כשהוא מחובר, ואחרת localStorage (מצב הדגמה)
 const LS_EVENTS = 'sc_events_v1'
 const LS_PROFILE = 'sc_profile_v1'
+const LS_CATS = 'sc_cats_v1'
 
 
 const normalize = (e: CalEvent): CalEvent => ({
   ...e,
   event_time: e.event_time ? e.event_time.slice(0, 5) : null,
   people: e.people ?? [],
+  category: e.category ?? null,
 })
 
 function readLocal(): CalEvent[] {
@@ -35,9 +38,9 @@ function seedDemo(): CalEvent[] {
   }
   const base = { user_id: null, raw_source: null, source_file_url: null, source_file_name: null, reminder_sent: false, created_at: now.toISOString(), updated_at: now.toISOString() }
   const list: CalEvent[] = [
-    { ...base, id: 'demo-1', title: 'פגישת תיאום תכנון', event_date: at(1), event_time: '10:30', location: 'משרדי העירייה, קומה 3', people: ['דנה כהן', 'יוסי לוי'], description: 'סיכום הערות לתוכנית המפורטת.' },
-    { ...base, id: 'demo-2', title: 'ועדת היגוי', event_date: at(4), event_time: '16:00', location: 'זום', people: ['רונית אברהם'], description: null },
-    { ...base, id: 'demo-3', title: 'סיור באתר', event_date: at(9), event_time: null, location: 'רחוב הרצל 12', people: [], description: 'להצטייד בנעליים סגורות.' },
+    { ...base, id: 'demo-1', title: 'פגישת תיאום תכנון', event_date: at(1), event_time: '10:30', location: 'משרדי העירייה, קומה 3', people: ['דנה כהן', 'יוסי לוי'], description: 'סיכום הערות לתוכנית המפורטת.', category: 'red' },
+    { ...base, id: 'demo-2', title: 'ועדת היגוי', event_date: at(4), event_time: '16:00', location: 'זום', people: ['רונית אברהם'], description: null, category: 'red' },
+    { ...base, id: 'demo-3', title: 'סיור באתר', event_date: at(9), event_time: null, location: 'רחוב הרצל 12', people: [], description: 'להצטייד בנעליים סגורות.', category: 'green' },
   ]
   writeLocal(list)
   return list
@@ -113,6 +116,23 @@ export async function saveProfile(p: Profile): Promise<void> {
     return
   }
   await api('profile_set', { whatsapp_number: p.whatsapp_number })
+}
+
+// שמות הקטגוריות (ערוכים על ידי ענת)
+export async function getCategories(): Promise<CatNames> {
+  if (!supabase) {
+    try { return mergeNames(JSON.parse(localStorage.getItem(LS_CATS) ?? 'null')) } catch { return mergeNames(null) }
+  }
+  const { categories } = await api<{ categories: Partial<Record<string, string>> }>('categories_get')
+  return mergeNames(categories)
+}
+
+export async function saveCategories(names: CatNames): Promise<void> {
+  if (!supabase) {
+    try { localStorage.setItem(LS_CATS, JSON.stringify(names)) } catch { /* אחסון חסום */ }
+    return
+  }
+  await api('categories_set', { categories: names })
 }
 
 export { demoMode }

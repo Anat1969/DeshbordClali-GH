@@ -3,11 +3,12 @@ import type { EventDraft } from '../types'
 import { emptyDraft } from '../types'
 import { extractEvent } from '../lib/claude'
 import { uploadSource } from '../lib/store'
+import type { CatNames } from '../lib/categories'
 
 export type UploadStage = 'idle' | 'working' | 'review' | 'error'
 
 // זרימת ההעלאה: קובץ או טקסט, אחסון, חילוץ, ואז טיוטה לאישור
-export function useUpload() {
+export function useUpload(names: CatNames) {
   const [stage, setStage] = useState<UploadStage>('idle')
   const [step, setStep] = useState('')
   const [draft, setDraft] = useState<EventDraft | null>(null)
@@ -20,7 +21,7 @@ export function useUpload() {
       setStep(input.file ? 'מעלה ומחלץ פרטים מהקובץ' : 'מחלץ פרטים מהטקסט')
       // העלאה וחילוץ רצים במקביל. כשל באחסון לא עוצר את החילוץ
       const [extracted, stored] = await Promise.all([
-        extractEvent(input),
+        extractEvent(input, names),
         input.file ? uploadSource(input.file).catch(() => null) : Promise.resolve(null),
       ])
       setDraft({ ...extracted, source_file_url: stored?.path ?? null, source_file_name: stored?.name ?? input.file?.name ?? null })

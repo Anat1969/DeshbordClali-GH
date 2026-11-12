@@ -13,20 +13,21 @@ const json = (body: unknown, status = 200) =>
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
 const sha256 = async (s: string) => hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))
 
-const COLS = 'id,title,event_date,event_time,location,people,description,raw_source,source_file_url,source_file_name,reminder_sent,created_at,updated_at'
-const FIELDS = ['title', 'event_date', 'event_time', 'location', 'people', 'description', 'raw_source', 'source_file_url', 'source_file_name']
+const COLS = 'id,title,event_date,event_time,location,people,description,raw_source,source_file_url,source_file_name,category,reminder_sent,created_at,updated_at'
+const FIELDS = ['title', 'event_date', 'event_time', 'location', 'people', 'description', 'raw_source', 'source_file_url', 'source_file_name', 'category']
 
 // רק שדות מותרים נכנסים לטבלה
 function pick(src: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {}
   for (const f of FIELDS) if (f in src) out[f] = src[f]
   if ('event_time' in out && !out.event_time) out.event_time = null
+  if ('category' in out && !['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'].includes(String(out.category))) out.category = null
   return out
 }
 
 const todayIL = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem' }).format(new Date())
 
-const extractPrompt = () => `אתה מחלץ פרטי אירוע ממסמך.
+const extractPrompt = (cats: string[] = []) => `אתה מחלץ פרטי אירוע ממסמך.
 החזר JSON בלבד, בלי הסבר ובלי גדרות קוד, בפורמט הזה:
 {
   "title": "שם האירוע",
@@ -34,21 +35,23 @@ const extractPrompt = () => `אתה מחלץ פרטי אירוע ממסמך.
   "event_time": "HH:MM" | null,
   "location": "מיקום" | null,
   "people": ["שם1", "שם2"],
-  "description": "תיאור קצר בעברית"
+  "description": "תיאור קצר בעברית"${cats.length ? `,
+  "category_name": אחד מהשמות האלה בדיוק: ${cats.map((c) => `"${c}"`).join(", ")}, או null אם אף אחד לא מתאים` : ""}
 }
 היום ${todayIL()}. תאריך בלי שנה הוא התאריך הקרוב הבא. אם אי אפשר לחלץ תאריך, event_date הוא null.
 אל תמציא פרטים שלא כתובים במסמך.`
 
-async function extract(b: { text?: string; mime?: string; data?: string }) {
+async function extract(b: { text?: string; mime?: string; data?: string; categories?: string[] }) {
+  const cats = Array.isArray(b.categories) ? b.categories.filter((c) => typeof c === 'string').slice(0, 7) : []
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
   if (!apiKey) return json({ error: 'no_anthropic_key' }, 503)
   const content: unknown[] = []
   if (typeof b.text === 'string' && b.text) {
-    content.push({ type: 'text', text: `${extractPrompt()}\n\nטקסט לחילוץ:\n${b.text}` })
+    content.push({ type: 'text', text: `${extractPrompt(cats)}\n\nטקסט לחילוץ:\n${b.text}` })
   } else if (b.mime === 'application/pdf') {
-    content.push({ type: 'document', source: { type: 'base64', media_type: b.mime, data: b.data } }, { type: 'text', text: extractPrompt() })
+    content.push({ type: 'document', source: { type: 'base64', media_type: b.mime, data: b.data } }, { type: 'text', text: extractPrompt(cats) })
   } else if (typeof b.mime === 'string' && b.mime.startsWith('image/')) {
-    content.push({ type: 'image', source: { type: 'base64', media_type: b.mime, data: b.data } }, { type: 'text', text: extractPrompt() })
+    content.push({ type: 'image', source: { type: 'base64', media_type: b.mime, data: b.data } }, { type: 'text', text: extractPrompt(cats) })
   } else return json({ error: 'bad_input' }, 400)
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -122,6 +125,20 @@ Deno.serve(async (req) => {
       const n = String(b.whatsapp_number ?? '')
       if (n && !/^\+9725\d{8}$/.test(n)) return json({ error: 'bad_number' }, 400)
       const { error } = await sb.from('yoman_profiles').upsert({ owner_hash: owner, whatsapp_number: n })
+      return error ? json({ error: error.message }, 500) : json({ ok: true })
+    }
+
+    case 'categories_get': {
+      const { data } = await sb.from('yoman_profiles').select('categories').eq('owner_hash', owner).maybeSingle()
+      return json({ categories: data?.categories ?? {} })
+    }
+
+    case 'categories_set': {
+      // רק שבעת המפתחות, כל שם עד 24 תווים
+      const keys = ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet']
+      const clean: Record<string, string> = {}
+      for (const k of keys) clean[k] = String(b.categories?.[k] ?? '').slice(0, 24)
+      const { error } = await sb.from('yoman_profiles').upsert({ owner_hash: owner, categories: clean })
       return error ? json({ error: error.message }, 500) : json({ ok: true })
     }
 

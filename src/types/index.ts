@@ -11,6 +11,7 @@ export interface CalEvent {
   raw_source: string | null
   source_file_url: string | null // נתיב ב-Storage
   source_file_name: string | null
+  category: string | null // מפתח צבע: red, orange, yellow, green, blue, indigo, violet
   reminder_sent: boolean
   created_at: string
   updated_at: string
@@ -27,6 +28,7 @@ export interface EventDraft {
   raw_source: string | null
   source_file_url: string | null
   source_file_name: string | null
+  category: string | null
 }
 
 export const emptyDraft = (): EventDraft => ({
@@ -39,6 +41,7 @@ export const emptyDraft = (): EventDraft => ({
   raw_source: null,
   source_file_url: null,
   source_file_name: null,
+  category: null,
 })
 
 export interface Profile {
