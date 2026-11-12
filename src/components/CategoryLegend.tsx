@@ -10,7 +10,7 @@ export default function CategoryLegend() {
   return (
     <section className="mt-3" aria-label="מקרא קטגוריות">
       <div className="mb-2 flex items-center justify-between gap-3">
-        <p className="text-sm text-mute">מקרא: כל יום נצבע בצבע הקטגוריה של האירועים בו. מסגרת כחולה היא היום שנבחר.</p>
+        <p className="text-sm text-mute">מקרא: כל יום נצבע בצבע הקטגוריה של האירועים בו. ריבוע כחול מלא הוא היום, תמיד במרכז. מסגרת כחולה היא היום שנבחר.</p>
         <div className="flex shrink-0 items-center gap-3">
           {edit && cats.save === 'saving' && <span className="text-sm text-mute">שומר...</span>}
           {edit && cats.save === 'saved' && <span className="text-sm text-good">נשמר</span>}

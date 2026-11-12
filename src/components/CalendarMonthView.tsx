@@ -2,14 +2,18 @@ import { useMemo } from 'react'
 import type { CalEvent } from '../types'
 import CategoryLegend from './CategoryLegend'
 import { SLOTS, slotOf, tint } from '../lib/categories'
-import { HE_DAYS_SHORT, HE_MONTHS, monthGrid, todayIso } from '../lib/dateUtils'
+import {
+  HE_DAYS_FULL, HE_DAYS_SHORT, HE_MONTHS, VIEW_LABEL, formatRange, formatShort, parseIso, todayIso, weekdayOf, windowDays,
+  type ViewMode,
+} from '../lib/dateUtils'
 
 interface Props {
-  year: number
-  month: number
+  mode: ViewMode
+  anchor: string
   events: CalEvent[]
   selected: string
   flashId: string | null
+  onMode: (m: ViewMode) => void
   onSelect: (iso: string) => void
   onPrev: () => void
   onNext: () => void
@@ -17,24 +21,47 @@ interface Props {
   onOpenEvent: (e: CalEvent) => void
 }
 
-// לוח שנה חודשי: גריד 7 על 6, יום הוא תא של 48px לפחות, נקודה כחולה כשיש אירוע
-export default function CalendarMonthView({ year, month, events, selected, flashId, onSelect, onPrev, onNext, onToday, onOpenEvent }: Props) {
-  const cells = useMemo(() => monthGrid(year, month), [year, month])
+const MODES: ViewMode[] = ['day', 'week', 'month', 'quarter']
+
+// לוח מתגלגל: יום, שבוע, חודש או שלושה חודשים, תמיד כשהעוגן ("היום") במרכז החלון
+export default function CalendarMonthView({ mode, anchor, events, selected, flashId, onMode, onSelect, onPrev, onNext, onToday, onOpenEvent }: Props) {
+  const days = useMemo(() => windowDays(anchor, mode), [anchor, mode])
   const byDate = useMemo(() => {
     const m = new Map<string, CalEvent[]>()
     for (const e of events) m.set(e.event_date, [...(m.get(e.event_date) ?? []), e])
     return m
   }, [events])
   const today = todayIso()
+  const isGrid = mode === 'month' || mode === 'quarter'
+  const rows = Math.ceil(days.length / 7)
+  const firstDow = weekdayOf(days[0])
+  // כותרות ימי השבוע מתחילות מיום השבוע של התא הראשון, כך שהיום תמיד בעמודה האמצעית
+  const heads = Array.from({ length: 7 }, (_, i) => (firstDow + i) % 7)
+  const centerCol = 3
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col" aria-label={`לוח שנה ${HE_MONTHS[month]} ${year}`}>
-      {/* כפתורי הקודם והבא במקום קבוע, באותו רוחב */}
-      <div className="mb-3 grid grid-cols-[76px_1fr_76px] sm:grid-cols-[88px_1fr_88px] items-center gap-2">
+    <section className="flex min-h-0 flex-1 flex-col" aria-label={`לוח שנה, ${VIEW_LABEL[mode]}`}>
+      {/* בורר תצוגה: ארבעה כפתורים באותו גודל */}
+      <div className="mb-3 grid grid-cols-4 gap-2" role="group" aria-label="תצוגה">
+        {MODES.map((m) => (
+          <button
+            key={m}
+            type="button"
+            aria-pressed={mode === m}
+            onClick={() => onMode(m)}
+            className={`btn !px-1 text-sm whitespace-nowrap sm:!px-4 sm:text-base ${mode === m ? 'btn-primary' : ''}`}
+          >
+            {VIEW_LABEL[m]}
+          </button>
+        ))}
+      </div>
+
+      {/* הקודם והבא במקום קבוע, באותו רוחב */}
+      <div className="mb-3 grid grid-cols-[76px_1fr_76px] items-center gap-2 sm:grid-cols-[88px_1fr_88px]">
         <button type="button" className="btn" onClick={onPrev}>הקודם</button>
         <div className="flex flex-col items-center">
-          <h2 className="whitespace-nowrap text-xl font-light sm:text-2xl">
-            {HE_MONTHS[month]} <span className="num">{year}</span>
+          <h2 className="whitespace-nowrap text-lg font-light sm:text-2xl">
+            <span className="num">{formatRange(days[0], days[days.length - 1])}</span>
           </h2>
           <button type="button" className="text-sm text-navy underline underline-offset-4" onClick={onToday}>חזרה להיום</button>
         </div>
@@ -42,61 +69,88 @@ export default function CalendarMonthView({ year, month, events, selected, flash
       </div>
 
       <div role="grid" className="flex min-h-0 flex-1 flex-col">
-        <div role="row" className="grid grid-cols-7 pb-1 text-center text-sm text-mute">
-          {HE_DAYS_SHORT.map((d) => (
-            <div key={d} role="columnheader">{d}</div>
-          ))}
-        </div>
-        <div className="grid min-h-0 flex-1 grid-cols-7 grid-rows-6 gap-1">
-          {cells.map((c) => {
-            const list = byDate.get(c.iso) ?? []
-            const isSel = c.iso === selected
-            const isToday = c.iso === today
+        {/* ימי השבוע: גדולים ובולטים, והיום האמצעי מסומן */}
+        {mode !== 'day' && (
+          <div role="row" className={`grid-cols-7 pb-1.5 text-center ${mode === 'week' ? 'hidden sm:grid' : 'grid'}`}>
+            {heads.map((dow, i) => (
+              <div key={i} role="columnheader" className={`text-lg font-semibold sm:text-xl ${i === centerCol ? 'text-navy' : 'text-ink'}`}>
+                <span className="sm:hidden">{HE_DAYS_SHORT[dow]}</span>
+                <span className="hidden sm:inline">{HE_DAYS_FULL[dow]}</span>
+                {i === centerCol && <span className="block h-1 rounded bg-navy" aria-hidden="true" />}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div
+          className={`min-h-0 flex-1 gap-1 overflow-auto ${
+            mode === 'day' ? 'grid grid-cols-1 sm:grid-cols-[1fr_1.5fr_1fr] sm:grid-rows-1' : mode === 'week' ? 'grid grid-cols-1 sm:grid-cols-7 sm:grid-rows-1' : 'grid grid-cols-7'
+          }`}
+          style={isGrid ? { gridTemplateRows: `repeat(${rows}, minmax(${mode === 'quarter' ? 44 : 52}px, 1fr))` } : undefined}
+        >
+          {days.map((iso, idx) => {
+            const list = byDate.get(iso) ?? []
+            const isSel = iso === selected
+            const isToday = iso === today
+            const { m, d } = parseIso(iso)
             // צבע היום: צבע הקטגוריה. כמה קטגוריות באותו יום מוצגות כפסים
-            const dayColors = SLOTS.filter((sl) => list.some((e) => e.category === sl.key)).map((sl) => tint(sl.color))
-            const dayBg = dayColors.length === 0 ? undefined : dayColors.length === 1 ? dayColors[0] : `linear-gradient(90deg, ${dayColors.map((col, i) => `${col} ${(i * 100) / dayColors.length}% ${((i + 1) * 100) / dayColors.length}%`).join(', ')})`
+            const colors = SLOTS.filter((sl) => list.some((e) => e.category === sl.key)).map((sl) => tint(sl.color))
+            const bg = colors.length === 0 ? undefined : colors.length === 1 ? colors[0] : `linear-gradient(90deg, ${colors.map((c, i) => `${c} ${(i * 100) / colors.length}% ${((i + 1) * 100) / colors.length}%`).join(', ')})`
+            // בתחילת חודש ובתא הראשון מציגים את שם החודש
+            const label = isGrid ? (d === 1 || idx === 0 ? `${d} ${HE_MONTHS[m].slice(0, 3)}` : String(d)) : formatShort(iso)
+            const big = mode === 'day' || mode === 'week'
             return (
               <div
-                key={c.iso}
+                key={iso}
                 role="gridcell"
                 tabIndex={0}
                 aria-selected={isSel}
-                aria-label={`${c.day} ב${HE_MONTHS[Number(c.iso.slice(5, 7)) - 1]}${list.length ? `, ${list.length} אירועים` : ''}`}
-                style={dayBg ? { background: dayBg } : undefined}
-                onClick={() => onSelect(c.iso)}
-                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(c.iso))}
-                className={`flex min-h-12 cursor-pointer flex-col items-center rounded-lg p-1 transition-colors sm:items-stretch sm:p-1.5 ${
-                  isSel ? 'bg-[#E8ECF4] shadow-[inset_0_0_0_2px_#1A2B4A]' : dayBg ? '' : 'hover:bg-soft'
-                } ${c.inMonth ? '' : 'opacity-35'}`}
+                data-today={isToday || undefined}
+                aria-label={`${formatShort(iso)}${list.length ? `, ${list.length} אירועים` : ''}`}
+                style={bg ? { background: bg } : undefined}
+                onClick={() => onSelect(iso)}
+                onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(iso))}
+                className={`flex min-h-12 cursor-pointer flex-col rounded-lg p-1.5 transition-colors ${big ? 'items-stretch sm:p-2.5' : 'items-center sm:items-stretch'} ${
+                  isSel ? 'bg-[#E8ECF4] shadow-[inset_0_0_0_2px_#1A2B4A]' : bg ? '' : 'bg-soft/60 hover:bg-soft'
+                }`}
               >
-                <span className={`num mx-auto text-sm sm:mx-0 sm:self-start ${isToday ? 'rounded-md bg-navy px-1.5 font-semibold text-white' : isSel ? 'font-semibold' : ''}`}>
-                  {c.day}
+                <span className={`num text-sm ${big ? 'text-base font-semibold sm:text-lg' : 'mx-auto sm:mx-0 sm:self-start'} ${isToday ? 'self-start rounded-md bg-navy px-1.5 font-semibold text-white' : iso < today && !isSel ? 'text-mute' : ''}`}>
+                  {label}
                 </span>
-                {/* נייד: נקודות. מסך רחב: כרטיסונים עם שם האירוע */}
-                <div className="mt-1 flex gap-1 sm:hidden">
-                  {list.slice(0, 3).map((e) => (
+                {isToday && big && <span className="mt-1 text-xs font-semibold text-navy">היום</span>}
+
+                {/* נקודות: נייד, או תצוגה של שלושה חודשים */}
+                <div className={`mt-1 flex flex-wrap justify-center gap-1 ${big ? 'hidden' : mode === 'quarter' ? 'flex' : 'sm:hidden'}`}>
+                  {list.slice(0, 4).map((e) => (
                     <span key={e.id} className="h-1.5 w-1.5 rounded-full" style={{ background: slotOf(e.category)?.color ?? '#1A2B4A' }} />
                   ))}
                 </div>
-                <div className="mt-1 hidden min-h-0 flex-col gap-1 overflow-hidden sm:flex">
-                  {list.slice(0, 2).map((e) => (
-                    <button
-                      key={e.id}
-                      type="button"
-                      onClick={(ev) => {
-                        ev.stopPropagation()
-                        onOpenEvent(e)
-                      }}
-                      style={{ background: slotOf(e.category)?.color ?? '#1A2B4A', color: slotOf(e.category)?.fg ?? '#FFFFFF' }}
-                      className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-right text-xs hover:opacity-85 ${flashId === e.id ? 'flash' : ''}`}
-                      title={e.title}
-                    >
-                      {e.event_time && <span className="num shrink-0 opacity-75">{e.event_time.slice(0, 5)}</span>}
-                      <span className="truncate">{e.title}</span>
-                    </button>
-                  ))}
-                  {list.length > 2 && <span className="text-xs text-mute">ועוד {list.length - 2}</span>}
-                </div>
+
+                {/* כרטיסונים עם שם האירוע: חודש ושבוע ויום */}
+                {mode !== 'quarter' && (
+                  <div className={`mt-1 min-h-0 flex-col gap-1 overflow-hidden ${big ? 'flex' : 'hidden sm:flex'}`}>
+                    {(big ? list : list.slice(0, 2)).map((e) => {
+                      const sl = slotOf(e.category)
+                      return (
+                        <button
+                          key={e.id}
+                          type="button"
+                          onClick={(ev) => {
+                            ev.stopPropagation()
+                            onOpenEvent(e)
+                          }}
+                          style={{ background: sl?.color ?? '#1A2B4A', color: sl?.fg ?? '#FFFFFF' }}
+                          className={`flex items-start gap-1.5 rounded-md px-1.5 py-0.5 text-right text-xs hover:opacity-85 ${big ? 'sm:text-sm' : ''} ${flashId === e.id ? 'flash' : ''}`}
+                          title={e.title}
+                        >
+                          {e.event_time && <span className="num shrink-0 opacity-80">{e.event_time.slice(0, 5)}</span>}
+                          <span className={big ? 'break-words' : 'truncate'}>{e.title}</span>
+                        </button>
+                      )
+                    })}
+                    {!big && list.length > 2 && <span className="text-xs text-mute">ועוד {list.length - 2}</span>}
+                  </div>
+                )}
               </div>
             )
           })}

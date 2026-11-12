@@ -71,3 +71,37 @@ export function relativeDays(iso: string): string {
   if (n > 2) return `בעוד ${n} ימים`
   return `לפני ${-n} ימים`
 }
+
+// ---- תצוגות מתגלגלות: "היום" תמיד באמצע ----
+export type ViewMode = 'day' | 'week' | 'month' | 'quarter'
+export const VIEW_LABEL: Record<ViewMode, string> = { day: 'יום', week: 'שבוע', month: 'חודש', quarter: '3 חודשים' }
+// כמה ימים לכל צד של היום: 3 ימים, 7 ימים, 5 שבועות, 13 שבועות
+export const VIEW_RADIUS: Record<ViewMode, number> = { day: 1, week: 3, month: 17, quarter: 45 }
+export const VIEW_STEP: Record<ViewMode, number> = { day: 1, week: 7, month: 35, quarter: 91 }
+export const HE_DAYS_FULL = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת']
+
+export function addDays(iso: string, n: number): string {
+  const { y, m, d } = parseIso(iso)
+  const dt = new Date(Date.UTC(y, m, d + n))
+  return toIso(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate())
+}
+
+export const weekdayOf = (iso: string) => {
+  const { y, m, d } = parseIso(iso)
+  return new Date(Date.UTC(y, m, d)).getUTCDay()
+}
+
+// כל הימים בחלון, כשהעוגן (ברירת מחדל: היום) במרכז
+export function windowDays(anchor: string, mode: ViewMode): string[] {
+  const r = VIEW_RADIUS[mode]
+  return Array.from({ length: 2 * r + 1 }, (_, i) => addDays(anchor, i - r))
+}
+
+// טווח לכותרת: "9 עד 15 בנובמבר 2026" או "29 באוקטובר עד 4 בנובמבר 2026"
+export function formatRange(a: string, b: string): string {
+  const x = parseIso(a)
+  const z = parseIso(b)
+  if (x.y === z.y && x.m === z.m) return `${x.d} עד ${z.d} ב${HE_MONTHS[z.m]} ${z.y}`
+  if (x.y === z.y) return `${x.d} ב${HE_MONTHS[x.m]} עד ${z.d} ב${HE_MONTHS[z.m]} ${z.y}`
+  return `${x.d} ב${HE_MONTHS[x.m]} ${x.y} עד ${z.d} ב${HE_MONTHS[z.m]} ${z.y}`
+}

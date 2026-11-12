@@ -4,15 +4,28 @@ import EventCard from '../components/EventCard'
 import EventModal from '../components/EventModal'
 import UploadZone from '../components/UploadZone'
 import { useApp } from '../lib/ctx'
-import { addMonths, daysUntil, formatLong, formatShort, formatTime, parseIso, relativeDays, todayIso } from '../lib/dateUtils'
+import TaskList from '../components/TaskList'
+import { VIEW_STEP, addDays, daysUntil, formatLong, formatShort, formatTime, relativeDays, todayIso, type ViewMode } from '../lib/dateUtils'
 import type { CalEvent } from '../types'
 
 // הבית: כותרת עם המסקנה, לוח חודשי, ומימין פאנל של היום שנבחר והעלאה
 export default function Home({ uploading, step }: { uploading: boolean; step: string }) {
   const app = useApp()
   const { events, loading, error, flashId, reload } = app.ev
-  const t = parseIso(todayIso())
-  const [view, setView] = useState({ y: t.y, m: t.m })
+  // העוגן הוא מרכז החלון. ברירת מחדל: היום
+  const [anchor, setAnchor] = useState(todayIso())
+  const [mode, setModeState] = useState<ViewMode>(() => {
+    try {
+      const m = localStorage.getItem('yoman_view_v1')
+      return m === 'day' || m === 'week' || m === 'month' || m === 'quarter' ? m : 'month'
+    } catch {
+      return 'month'
+    }
+  })
+  const setMode = (m: ViewMode) => {
+    setModeState(m)
+    try { localStorage.setItem('yoman_view_v1', m) } catch { /* אחסון חסום */ }
+  }
   const [selected, setSelected] = useState(todayIso())
   const [open, setOpen] = useState<CalEvent | null>(null)
 
@@ -21,9 +34,9 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
   // החלון תמיד מציג את הגרסה העדכנית של האירוע
   const openLive = open ? events.find((e) => e.id === open.id) ?? null : null
 
-  const go = (delta: number) => setView((v) => addMonths(v.y, v.m, delta))
+  const go = (dir: number) => setAnchor((a) => addDays(a, dir * VIEW_STEP[mode]))
   const toToday = () => {
-    setView({ y: t.y, m: t.m })
+    setAnchor(todayIso())
     setSelected(todayIso())
   }
 
@@ -65,11 +78,12 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
             <div className="skeleton flex-1" />
           ) : (
             <CalendarMonthView
-              year={view.y}
-              month={view.m}
+              mode={mode}
+              anchor={anchor}
               events={events}
               selected={selected}
               flashId={flashId}
+              onMode={setMode}
               onSelect={setSelected}
               onPrev={() => go(-1)}
               onNext={() => go(1)}
@@ -96,6 +110,7 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
               </div>
             )}
           </section>
+          <TaskList />
         </aside>
       </div>
 
