@@ -9,6 +9,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useApp } from '../lib/ctx'
 import TaskList from '../components/TaskList'
 import { VIEW_STEP, addDays, daysUntil, formatLong, formatShort, formatTime, relativeDays, todayIso, type ViewMode } from '../lib/dateUtils'
+import { milestoneMap } from '../lib/projects'
 import type { CalEvent } from '../types'
 
 // הבית: כותרת עם המסקנה, לוח חודשי, ומימין פאנל של היום שנבחר והעלאה
@@ -38,6 +39,10 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
     setAnchor(todayIso())
     setSelected(todayIso())
   }, [loc.key])
+
+  // אבני דרך של פרויקטים, לפי תאריך
+  const milestones = useMemo(() => milestoneMap(app.projects.projects), [app.projects.projects])
+  const dayMarks = milestones.get(selected) ?? []
 
   const next = useMemo(() => events.find((e) => daysUntil(e.event_date) >= 0), [events])
   const day = events.filter((e) => e.event_date === selected)
@@ -102,6 +107,7 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
               selected={selected}
               flashId={flashId}
               nextId={next?.id ?? null}
+              milestones={milestones}
               onAdd={(iso) => (setSelected(iso), app.newManual(iso))}
               onMode={setMode}
               onSelect={setSelected}
@@ -120,13 +126,23 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
               <h2 className="text-lg font-light">{formatLong(selected)}</h2>
               <IconButton name="plus" label="הוספת אירוע ליום הזה" tone="primary" size={20} className="!h-10 !w-10" onClick={() => app.newManual(selected)} />
             </div>
+            {dayMarks.length > 0 && (
+              <ul className="m-0 mb-2 grid list-none gap-2 p-0" aria-label="אבני דרך ביום הזה">
+                {dayMarks.map((m, i) => (
+                  <li key={i} className={`flex items-start gap-2 rounded-lg border-2 border-dashed border-navy bg-white p-2.5 ${m.done ? 'text-mute line-through' : ''}`}>
+                    <Icon name={m.done ? 'check' : 'diamond'} size={16} className="mt-1 shrink-0 text-navy" />
+                    <span className="min-w-0 break-words"><b className="text-[#111111]">{m.name}</b><br /><span className="text-sm text-mute">אבן דרך בפרויקט {m.projectName}</span></span>
+                  </li>
+                ))}
+              </ul>
+            )}
             {day.length > 0 ? (
               <div className="grid gap-2">
                 {day.map((e) => (
                   <EventCard key={e.id} event={e} flash={flashId === e.id} onOpen={() => setOpen(e)} />
                 ))}
               </div>
-            ) : (
+            ) : dayMarks.length === 0 && (
               <div className="rounded-lg bg-soft p-4 text-mute">
                 <p>אין אירועים ביום הזה.</p>
                 <p className="mt-1 text-sm">לחיצה כפולה על יום בלוח, או על +, מוסיפה אירוע ישר לתאריך.</p>

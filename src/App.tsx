@@ -16,6 +16,7 @@ import { useEvents } from './hooks/useEvents'
 import { useUpload } from './hooks/useUpload'
 import { useCategories } from './hooks/useCategories'
 import { useQuickLinks } from './hooks/useQuickLinks'
+import { useProjects } from './hooks/useProjects'
 import Work from './pages/Work'
 import Projects from './pages/Projects'
 import { demoMode } from './lib/supabase'
@@ -26,6 +27,7 @@ export default function App() {
   const ev = useEvents(authed)
   const cats = useCategories(authed)
   const links = useQuickLinks(authed)
+  const projects = useProjects(authed)
   const up = useUpload(cats.names)
   const fileInput = useRef<HTMLInputElement>(null)
   const [paste, setPaste] = useState<false | 'text' | 'voice'>(false)
@@ -65,6 +67,7 @@ export default function App() {
           ev,
           cats,
           links,
+          projects,
           reviewDraft: up.review,
           pickFile: () => fileInput.current?.click(),
           openPaste: () => setPaste('text'),

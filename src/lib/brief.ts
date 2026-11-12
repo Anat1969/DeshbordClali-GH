@@ -1,4 +1,4 @@
-import type { CalEvent, Task } from '../types'
+import type { CalEvent, Task, TaskDoc } from '../types'
 import type { Project } from './projects'
 import { addDays, daysUntil, formatTime } from './dateUtils'
 import { dayKey } from './inspire'
@@ -6,7 +6,8 @@ import { dayKey } from './inspire'
 // תדרוך בוקר: צורת היום, שלושה פרקים, מה דורש תשומת לב, ומה כבר סגור.
 // הכול מחושב מהנתונים שביומן, בלי לנחש. הנימה: מתארים ומוסרים, בלי פקודות ובלי התנצלויות
 export type DayType = 'heavy' | 'normal' | 'open'
-export interface BriefItem { title: string; text: string; to?: string }
+// docs: המסמכים של המשימה, כדי שיהיה חומר לבצע אותה
+export interface BriefItem { title: string; text: string; to?: string; docs?: { taskId: string; doc: TaskDoc }[] }
 export interface Dot { t: number; title: string; overlap: boolean }
 export interface Brief {
   dayType: DayType
@@ -89,6 +90,13 @@ export function buildBrief(o: { events: CalEvent[]; tasks: Task[]; projects: Pro
   const pText = (p: Project) => `במעקב פרויקטים: ${p.progress}% הושלמו. ${p.next_step ? `הצעד הבא: ${p.next_step}.` : 'אין צעד הבא מוגדר.'}`
   const needs: BriefItem[] = []
   for (const p of active.filter((x) => x.due_date && daysUntil(x.due_date, today) < 0)) needs.push({ title: `${p.name}: באיחור של ${-daysUntil(p.due_date!, today)} ימים`, text: pText(p), to: '/projects' })
+  // אבני דרך שלא בוצעו: באיחור, היום או בשלושת הימים הקרובים
+  for (const p of active) {
+    for (const m of (p.milestones ?? []).filter((x) => !x.done && daysUntil(x.date, today) <= 3).sort((a, b) => (a.date < b.date ? -1 : 1))) {
+      const d = daysUntil(m.date, today)
+      needs.push({ title: `אבן דרך: ${m.name}`, text: `בפרויקט ${p.name}: ${d < 0 ? `באיחור של ${-d} ימים` : d === 0 ? 'היום' : `בעוד ${d} ימים`}. ${pText(p)}`, to: '/projects' })
+    }
+  }
   for (const e of events.filter((x) => x.event_date === tomorrow).sort((a, b) => (a.event_time ?? '') < (b.event_time ?? '') ? -1 : 1))
     needs.push({ title: `מחר: ${e.title}`, text: `ביומן: ${e.event_time ? formatTime(e.event_time) : 'בלי שעה'}${e.location ? `, ${e.location}` : ''}${e.people.length ? `, עם ${e.people.join(', ')}` : ''}.`, to: '/' })
   for (const p of active.filter((x) => x.due_date && daysUntil(x.due_date, today) >= 0 && daysUntil(x.due_date, today) <= 7)) {
@@ -96,7 +104,7 @@ export function buildBrief(o: { events: CalEvent[]; tasks: Task[]; projects: Pro
     needs.push({ title: `${p.name}: ${d === 0 ? 'המועד היום' : `בעוד ${d} ימים`}`, text: pText(p), to: '/projects' })
   }
   const open = tasks.filter((t) => !t.done).sort((a, b) => (a.created_at < b.created_at ? -1 : 1))
-  for (const t of open.slice(0, 4)) needs.push({ title: t.text, text: `במשימות: נרשמה ${ago(t.created_at, today)}${t.note ? `. הערה: ${t.note}` : ''}.`, to: '/' })
+  for (const t of open.slice(0, 4)) needs.push({ title: t.text, text: `במשימות: נרשמה ${ago(t.created_at, today)}${t.note ? `. הערה: ${t.note}` : ''}.${(t.docs ?? []).length ? ` יש ${(t.docs ?? []).length} מסמכים לביצוע.` : ''}`, to: '/', docs: (t.docs ?? []).map((doc) => ({ taskId: t.id, doc })) })
   if (open.length > 4) needs.push({ title: `ועוד ${open.length - 4} משימות פתוחות`, text: 'ברשימת המשימות ביומן.', to: '/' })
   const stalled = active.filter((x) => x.status === 'active' && Date.now() - new Date(x.updated_at).getTime() >= 7 * 86400000 && !(x.due_date && daysUntil(x.due_date, today) <= 7)).slice(0, 2)
   for (const p of stalled) needs.push({ title: `${p.name}: לא עודכן שבוע`, text: pText(p), to: '/projects' })

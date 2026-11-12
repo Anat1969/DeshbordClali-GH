@@ -49,6 +49,16 @@ export interface Profile {
 }
 
 // משימה ברשימה הצדדית
+// מסמך של משימה: קובץ שהועלה, או קישור
+export interface TaskDoc {
+  id: string
+  kind: 'file' | 'link'
+  name: string
+  url?: string
+  path?: string
+  size?: number
+}
+
 export interface Task {
   id: string
   text: string
@@ -56,4 +66,5 @@ export interface Task {
   done: boolean
   done_at: string | null
   created_at: string
+  docs: TaskDoc[]
 }

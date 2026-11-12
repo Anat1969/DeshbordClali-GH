@@ -3,7 +3,7 @@ import * as store from '../lib/projects'
 import type { Project, ProjectPatch } from '../lib/projects'
 
 // פרויקטים עם עדכון מיידי במסך וחזרה לאחור אם השרת נכשל
-export function useProjects() {
+export function useProjects(enabled = true) {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -19,7 +19,7 @@ export function useProjects() {
       setLoading(false)
     }
   }, [])
-  useEffect(() => { load() }, [load])
+  useEffect(() => { if (enabled) load() }, [enabled, load])
 
   const add = async (name: string) => {
     const p = await store.createProject(name)

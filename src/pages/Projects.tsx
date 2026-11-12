@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Icon, { IconButton } from '../components/Icon'
 import { useApp } from '../lib/ctx'
-import { useProjects } from '../hooks/useProjects'
-import { STATUS_LABEL, type Project, type ProjectStatus } from '../lib/projects'
+import { STATUS_LABEL, type Milestone, type Project, type ProjectStatus } from '../lib/projects'
 import { daysUntil, todayIso } from '../lib/dateUtils'
 
 type Filter = 'all' | 'live' | 'waiting' | 'done'
@@ -26,7 +25,7 @@ function dueInfo(p: Project): { text: string; tone: 'bad' | 'warn' | 'ok' } | nu
 // מעקב פרויקטים: סטטוס, התקדמות, מועד, הצעד הבא והערה. נשמר אוטומטית
 export default function Projects() {
   const app = useApp()
-  const { projects, loading, error, reload, add, patch, remove } = useProjects()
+  const { projects, loading, error, reload, add, patch, remove } = app.projects
   const [name, setName] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
 
@@ -89,6 +88,8 @@ function ProjectCard({ p, onPatch, onRemove }: { p: Project; onPatch: (id: strin
   const [next, setNext] = useState(p.next_step ?? '')
   const [note, setNote] = useState(p.note ?? '')
   const [confirmDel, setConfirmDel] = useState(false)
+  // אבני דרך: שורות בעריכה נשמרות רק כשיש להן גם שם וגם תאריך
+  const [ms, setMs] = useState<Milestone[]>(p.milestones)
   const due = dueInfo(p)
   const stale = p.status !== 'done' && daysSince(p.updated_at) >= 7
 
@@ -99,6 +100,11 @@ function ProjectCard({ p, onPatch, onRemove }: { p: Project; onPatch: (id: strin
   }, [confirmDel])
 
   const save = (x: Partial<Project>) => onPatch(p.id, x).catch(() => app.toast('השמירה נכשלה, השינוי בוטל'))
+  const commitMs = (next: Milestone[]) => {
+    setMs(next)
+    save({ milestones: next.filter((m) => m.name.trim() && m.date) })
+  }
+  const editMs = (id: string, x: Partial<Milestone>) => setMs((l) => l.map((m) => (m.id === id ? { ...m, ...x } : m)))
   const commitText = (field: 'name' | 'next_step' | 'note', value: string, cur: string | null) => {
     if (value.trim() !== (cur ?? '').trim()) save({ [field]: value.trim() || null } as Partial<Project>)
   }
@@ -130,6 +136,25 @@ function ProjectCard({ p, onPatch, onRemove }: { p: Project; onPatch: (id: strin
           <span className="num font-semibold text-[#111111]">{p.progress}%</span>
         </label>
         <input id={`pr-${p.id}`} type="range" min={0} max={100} step={5} value={p.progress} className="h-6 w-full cursor-pointer accent-[#1A2B4A]" onChange={(e) => save({ progress: Number(e.target.value) })} />
+      </div>
+
+      {/* אבני דרך: תאריכים שמופיעים ביומן בסימן מיוחד, כדי לראות מסגרת ותוכנית עבודה */}
+      <div className="mt-4 rounded-lg bg-soft/70 p-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="flex items-center gap-1.5 text-sm font-semibold"><Icon name="diamond" size={14} />אבני דרך <span className="font-normal text-mute">(מופיעות ביומן)</span></p>
+          <IconButton name="plus" label="הוספת אבן דרך" tone="primary" size={16} className="!h-8 !w-8" onClick={() => setMs((l) => [...l, { id: crypto.randomUUID(), name: '', date: p.due_date ?? todayIso(), done: false }])} />
+        </div>
+        {ms.length === 0 && <p className="text-sm text-mute">אין אבני דרך. הוסיפי תאריכים של שלבי העבודה.</p>}
+        <ul className="m-0 grid list-none gap-2 p-0">
+          {[...ms].sort((a, b) => (a.date < b.date ? -1 : 1)).map((m) => (
+            <li key={m.id} className="grid grid-cols-[auto_9.5rem_1fr_auto] items-center gap-2">
+              <input type="checkbox" className="h-5 w-5 cursor-pointer accent-[#1A2B4A]" aria-label={`בוצעה: ${m.name || 'אבן דרך'}`} checked={m.done} onChange={(e) => commitMs(ms.map((x) => (x.id === m.id ? { ...x, done: e.target.checked } : x)))} />
+              <input type="date" className="field num !min-h-9 !py-1 text-sm" aria-label="תאריך אבן הדרך" value={m.date} onChange={(e) => editMs(m.id, { date: e.target.value })} onBlur={() => commitMs(ms)} />
+              <input className={`field !min-h-9 !py-1 text-sm ${m.done ? 'text-mute line-through' : ''}`} placeholder="שם השלב" aria-label="שם אבן הדרך" value={m.name} onChange={(e) => editMs(m.id, { name: e.target.value })} onBlur={() => commitMs(ms)} />
+              <IconButton name="x" label="הסרת אבן הדרך" tone="danger" size={14} className="!h-8 !w-8" onClick={() => commitMs(ms.filter((x) => x.id !== m.id))} />
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="mt-3">

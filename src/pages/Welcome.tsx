@@ -5,7 +5,6 @@ import MorningBrief from '../components/MorningBrief'
 import QuickLinks from '../components/QuickLinks'
 import { useApp } from '../lib/ctx'
 import { useTasks } from '../hooks/useTasks'
-import { useProjects } from '../hooks/useProjects'
 import { buildBrief } from '../lib/brief'
 import { getInspiration, markSeen, type InspireCard } from '../lib/inspire'
 import { formatLong, formatShort, todayIso } from '../lib/dateUtils'
@@ -34,7 +33,7 @@ const ROWS: { kinds: InspireCard['kind'][]; grid: string }[] = [
 export default function Welcome() {
   const app = useApp()
   const { tasks } = useTasks()
-  const { projects } = useProjects()
+  const projects = app.projects.projects
   const [cards, setCards] = useState<InspireCard[] | null>(null)
   const [failed, setFailed] = useState(false)
   const today = todayIso()
