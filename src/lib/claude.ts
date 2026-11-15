@@ -85,3 +85,31 @@ function localParse(text: string): EventDraft {
   d.description = lines.slice(1, 4).join(' ').slice(0, 200) || null
   return d
 }
+
+// חילוץ כל האירועים מצילום מסך של יומן. כל אירוע חוזר כטיוטה, והתאריך מאומת
+export async function extractMany(file: File, names?: CatNames): Promise<EventDraft[]> {
+  if (!/^image\/(png|jpe?g|webp|gif)$/.test(file.type)) throw new Error('צריך תמונה: PNG, JPG או WEBP.')
+  if (file.size > MAX_FILE_BYTES) throw new Error('התמונה גדולה מ-10MB.')
+  if (!supabase) throw new Error('חילוץ מתמונה זמין אחרי חיבור לשרת.')
+  const categories = names ? SLOTS.map((s) => names[s.key].trim()).filter(Boolean) : []
+  let r: { events: Array<Partial<EventDraft> & { category_name?: string | null }> }
+  try {
+    r = await api('extract_many', { mime: file.type, data: await toBase64(file), categories })
+  } catch (e) {
+    if (e instanceof ApiError && e.code === 'no_anthropic_key') throw new Error('חסר מפתח Claude בשרת, ולכן אי אפשר לקרוא את התמונה.')
+    throw new Error('קריאת התמונה נכשלה. אפשר לנסות שוב.')
+  }
+  return (r.events ?? [])
+    .filter((d) => d.title && String(d.title).trim())
+    .map((d) => ({
+      ...emptyDraft(),
+      title: String(d.title).trim(),
+      event_date: /^\d{4}-\d{2}-\d{2}$/.test(d.event_date ?? '') ? d.event_date! : null,
+      event_time: /^\d{2}:\d{2}$/.test(d.event_time ?? '') ? d.event_time! : null,
+      location: d.location || null,
+      people: Array.isArray(d.people) ? d.people.filter((p) => typeof p === 'string') : [],
+      description: d.description || null,
+      source_file_name: file.name || 'צילום מסך',
+      category: names ? SLOTS.find((s) => names[s.key].trim() && names[s.key].trim() === d.category_name?.trim())?.key ?? null : null,
+    }))
+}
