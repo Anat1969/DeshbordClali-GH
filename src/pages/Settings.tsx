@@ -58,7 +58,7 @@ export default function Settings() {
 
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-8 sm:px-6">
-      <Link to="/" className="mb-6 inline-block text-navy underline underline-offset-4">חזרה אל: היומן</Link>
+      <Link to="/calendar" className="mb-6 inline-block text-navy underline underline-offset-4">חזרה אל: היומן</Link>
       <h1 className="text-3xl font-light">הגדרות <b>ווצאפ</b></h1>
       <p className="mb-8 mt-1 text-mute">תזכורת נשלחת יום לפני כל אירוע, בשמונה בבוקר.</p>
 

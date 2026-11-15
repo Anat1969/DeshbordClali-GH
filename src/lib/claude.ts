@@ -101,6 +101,8 @@ export async function extractMany(file: File, names?: CatNames): Promise<EventDr
   }
   return (r.events ?? [])
     .filter((d) => d.title && String(d.title).trim())
+    // אירוע שבוטל ביומן המקור (למשל "בוטלה: ...") לא נכנס ליומן
+    .filter((d) => !/^\s*(בוטלה|בוטל|canceled|cancelled)\s*:/i.test(String(d.title)))
     .map((d) => ({
       ...emptyDraft(),
       title: String(d.title).trim(),

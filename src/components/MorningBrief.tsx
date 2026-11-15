@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import DocLink from './DocLink'
+import Clock from './Clock'
+import Sentences from './Sentences'
 import { loadAt, type Brief, type BriefItem } from '../lib/brief'
 
 // תדרוך בוקר בשפת "מבט של 30 שניות": ציור היום כשטח, שלושה פרקים, ומתחת מה דורש תשומת לב ומה כבר סגור
@@ -46,21 +48,21 @@ function Terrain({ brief }: { brief: Brief }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-auto w-full" role="img" aria-label="צורת היום: העומס לאורך השעות, כשכל נקודה היא אירוע">
-      <path d={smooth(pts)} fill="none" stroke={INK} strokeWidth="2.2" strokeLinecap="round" />
+      <path d={smooth(pts)} pathLength={1} className="draw" fill="none" stroke={INK} strokeWidth="2.2" strokeLinecap="round" />
       {/* אירועים: נקודה על הקו. חפיפה: שני עיגולים חלולים שנחתכים */}
       {brief.dots.map((d, i) =>
         d.overlap ? (
-          <g key={i}>
+          <g key={i} className="pop" style={{ '--d': `${700 + i * 160}ms` } as React.CSSProperties}>
             <circle cx={xOf(d.t) - 6} cy={yAt(d.t)} r="9" fill="#FCFCFB" stroke={INK} strokeWidth="2" />
             <circle cx={xOf(d.t) + 6} cy={yAt(d.t)} r="9" fill="#FCFCFB" stroke={INK} strokeWidth="2" />
           </g>
         ) : (
-          <circle key={i} cx={xOf(d.t)} cy={yAt(d.t)} r="8" fill={INK} />
+          <circle key={i} className="pop" style={{ '--d': `${700 + i * 160}ms` } as React.CSSProperties} cx={xOf(d.t)} cy={yAt(d.t)} r="8" fill={INK} />
         ),
       )}
       {/* הדגשה אחת בחימר: שמש מעל החלון הפנוי הארוך, ואם אין חלון, קו מתח מתחת לשעה העמוסה */}
       {brief.free ? (
-        <g stroke={CLAY} strokeWidth="2" strokeLinecap="round" fill="none">
+        <g stroke={CLAY} strokeWidth="2" strokeLinecap="round" fill="none" className="spin-slow">
           <circle cx={xOf((brief.free.from + brief.free.to) / 2)} cy="38" r="10" />
           {Array.from({ length: 8 }, (_, k) => {
             const a = (k * Math.PI) / 4
@@ -75,19 +77,19 @@ function Terrain({ brief }: { brief: Brief }) {
   )
 }
 
-function Items({ title, items }: { title: string; items: BriefItem[] }) {
+function Items({ title, items, important }: { title: string; items: BriefItem[]; important?: boolean }) {
   return (
     <section aria-label={title}>
-      <h2 className="mb-3 text-base font-semibold" style={{ color: INK }}>{title}</h2>
+      <h2 className="mb-4 text-2xl font-semibold" style={{ color: INK }}><span className={important ? 'marker-lg' : ''}>{title}</span></h2>
       <ol className="m-0 grid list-none gap-4 p-0">
         {items.map((it, i) => (
-          <li key={i} className="flex items-start gap-3">
-            <span className="num w-5 shrink-0 text-sm" style={{ color: GREY }}>{i + 1}</span>
+          <li key={i} className="rise flex items-start gap-3" style={{ '--d': `${i * 90}ms` } as React.CSSProperties}>
+            <span className="num w-6 shrink-0 text-lg font-semibold" style={{ color: important ? CLAY : GREY }}>{i + 1}.</span>
             <div className="min-w-0">
-              <p className="m-0 break-words font-semibold" style={{ color: INK }}>
-                {it.to ? <Link to={it.to} className="hover:underline">{it.title}</Link> : it.title}
+              <p className="m-0 break-words text-xl font-semibold" style={{ color: INK }}>
+                <span className={important ? 'marker' : ''}>{it.to ? <Link to={it.to} className="hover:underline">{it.title}</Link> : it.title}</span>
               </p>
-              <p className="m-0 mt-0.5 break-words text-[15px] leading-relaxed" style={{ color: SOFT }}>{it.text}</p>
+              <Sentences text={it.text} className="mt-1 text-[17px] leading-relaxed" />
               {/* מסמכי המשימה, בגדול, כדי שיהיה חומר לבצע אותה */}
               {it.docs && it.docs.length > 0 && (
                 <div className="mt-2.5 flex flex-wrap gap-2" aria-label="מסמכי המשימה">
@@ -106,19 +108,22 @@ export default function MorningBrief({ brief, dateLine, children }: { brief: Bri
   return (
     <>
       {/* הרצועה העליונה: תאריך, כותרת, ציור היום ושלושה פרקים */}
-      <section className="w-full px-4 py-8 sm:px-8 sm:py-10" style={{ background: '#F9F9F7', borderBottom: '1px solid #E1E1DF' }} aria-label="תדרוך בוקר">
+      <section className="hero-drift w-full px-4 py-8 sm:px-8 sm:py-10" style={{ borderBottom: '1px solid #E1E1DF' }} aria-label="תדרוך בוקר">
         <div className="mx-auto max-w-[860px]">
           <div className="flex items-start justify-between gap-4">
-            <p className="m-0 text-sm" style={{ color: SOFT }}>{dateLine}</p>
+            <p className="m-0 text-lg font-semibold" style={{ color: SOFT }}>{dateLine}</p>
             {children}
           </div>
-          <h1 className="m-0 mt-2 text-[30px] font-semibold leading-snug sm:text-[40px]" style={{ color: INK, fontFamily: SERIF }}>{brief.headline}</h1>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+            <h1 className="rise m-0 min-w-0 flex-1 basis-72 text-[34px] font-semibold leading-snug sm:text-[48px]" style={{ color: INK, fontFamily: SERIF }}>{brief.headline}</h1>
+            <div className="rise" style={{ '--d': '250ms' } as React.CSSProperties}><Clock size={176} /></div>
+          </div>
           <div className="mt-5"><Terrain brief={brief} /></div>
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             {brief.acts.map((a, i) => (
-              <div key={i} className={`min-w-0 py-1 sm:px-4 sm:first:ps-0 sm:last:pe-0 ${i ? 'max-sm:border-t max-sm:pt-4 sm:border-s' : ''} border-[#E4E3DC]`}>
-                <p className="m-0 text-sm font-bold" style={{ color: INK }}>{a.range}</p>
-                <p className="m-0 mt-1 break-words text-[15px] leading-relaxed" style={{ color: SOFT }}>{a.text}</p>
+              <div key={i} className={`rise min-w-0 py-1 sm:px-4 sm:first:ps-0 sm:last:pe-0 ${i ? 'max-sm:border-t max-sm:pt-4 sm:border-s' : ''} border-[#E4E3DC]`} style={{ '--d': `${900 + i * 150}ms` } as React.CSSProperties}>
+                <p className="m-0 text-lg font-semibold" style={{ color: INK }}><span className="marker">{a.range}</span></p>
+                <Sentences text={a.text} className="mt-1.5 text-[17px] leading-relaxed" />
               </div>
             ))}
           </div>
@@ -132,7 +137,7 @@ export default function MorningBrief({ brief, dateLine, children }: { brief: Bri
             <p className="m-0 text-lg" style={{ color: SOFT }}>אין מה שדורש אותך הבוקר.</p>
           ) : (
             <>
-              {brief.needs.length > 0 ? <Items title="דורש תשומת לב" items={brief.needs} /> : <p className="m-0" style={{ color: SOFT }}>אין מה שדורש אותך הבוקר.</p>}
+              {brief.needs.length > 0 ? <Items title="דורש תשומת לב" items={brief.needs} important /> : <p className="m-0" style={{ color: SOFT }}>אין מה שדורש אותך הבוקר.</p>}
               {brief.resolved.length > 0 && <Items title="כבר סגור" items={brief.resolved} />}
             </>
           )}

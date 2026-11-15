@@ -63,7 +63,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
     const base = weekend ? WEEKEND_BG : '#FFFFFF'
     const colors = slotsHere.map((sl) => tint(sl.color))
     const layer = colors.length === 0 ? null : colors.length === 1 ? `linear-gradient(${colors[0]}, ${colors[0]})` : `linear-gradient(90deg, ${colors.map((c, i) => `${c} ${(i * 100) / colors.length}% ${((i + 1) * 100) / colors.length}%`).join(', ')})`
-    const background = layer ? `${layer}, ${base}` : isSel ? '#E8ECF4' : base
+    const background = isToday ? `linear-gradient(#FFEE8C, #FFEE8C)` : layer ? `${layer}, ${base}` : isSel ? '#E8ECF4' : base
     const big = mode === 'day' || mode === 'week'
     // בתחילת חודש ובתא הראשון מציגים את שם החודש
     const label = isGrid ? (d === 1 || idx === 0 ? `${d} ${HE_MONTHS[m].slice(0, 3)}` : String(d)) : formatShort(iso)
@@ -78,7 +78,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
     if (isSel) style.boxShadow = 'inset 0 -4px 0 #1A2B4A'
     // היום: מסגרת שחורה
     if (isToday) {
-      style.outline = '3px solid #111111'
+      style.outline = '4px solid #E6B800'
       style.outlineOffset = '-3px'
       style.position = 'relative'
       style.zIndex = 1
@@ -102,7 +102,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
         className={`group flex min-h-12 min-w-0 cursor-pointer flex-col p-1.5 transition-colors ${big ? 'rounded-lg border sm:p-2.5' : ''}`}
       >
         <div className={`flex gap-1 ${big ? 'items-start justify-between' : 'flex-col items-center sm:flex-row sm:items-start sm:justify-between'}`}>
-          <span className={`num text-sm ${big ? 'text-base sm:text-lg' : ''} ${isToday ? 'font-semibold' : iso < today && !isSel ? 'text-mute' : ''}`}>{label}</span>
+          <span className={`num text-sm ${big ? 'text-base sm:text-lg' : ''} ${isToday ? 'text-base font-semibold sm:text-lg' : iso < today && !isSel ? 'text-mute' : ''}`}>{label}</span>
           <span className="flex items-center gap-0.5">
             {marks.length > 0 && <Icon name="diamond" size={iconSize} style={{ color: '#1A2B4A' }} />}
             {slotsHere.map((sl) => (
@@ -123,7 +123,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
             )}
           </span>
         </div>
-        {isToday && big && <span className="mt-0.5 text-xs font-semibold">היום</span>}
+        {isToday && big && <span className="marker mt-0.5 self-start text-sm font-semibold">היום</span>}
 
         {mode !== 'quarter' && (
           <div className={`mt-1 flex-col gap-1 ${big ? 'flex' : 'hidden sm:flex'}`}>

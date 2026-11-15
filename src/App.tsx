@@ -8,7 +8,6 @@ import Home from './pages/Home'
 import EventDetail from './pages/EventDetail'
 import Settings from './pages/Settings'
 import Welcome from './pages/Welcome'
-import { seenToday } from './lib/inspire'
 import Login from './pages/Login'
 import { Ctx } from './lib/ctx'
 import { useAccess } from './hooks/useAccess'
@@ -83,9 +82,10 @@ export default function App() {
           <TopBar />
           <main className="flex min-h-0 flex-1 flex-col overflow-auto">
             <Routes>
-              {/* בפעם הראשונה בכל יום נפתח דף ההשראה */}
-              <Route path="/" element={seenToday() ? <Home uploading={up.stage === 'working'} step={up.step} /> : <Navigate to="/welcome" replace />} />
-              <Route path="/welcome" element={<Welcome />} />
+              {/* דף הבית הוא תדרוך הבוקר, והאפליקציה נפתחת עליו */}
+              <Route path="/" element={<Welcome />} />
+              <Route path="/welcome" element={<Navigate to="/" replace />} />
+              <Route path="/calendar" element={<Home uploading={up.stage === 'working'} step={up.step} />} />
               <Route path="/work" element={<Work />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/event/:id" element={<EventDetail />} />

@@ -18,6 +18,7 @@ export default {
       fontFamily: {
         sans: ['Heebo', 'system-ui', 'sans-serif'],
         num: ['Inter', 'Heebo', 'sans-serif'],
+        hand: ['"Gveret Levin"', 'Heebo', 'cursive'],
       },
       boxShadow: {
         btn: '0 1px 2px rgba(26,43,74,.10), 0 2px 8px rgba(26,43,74,.06)',
