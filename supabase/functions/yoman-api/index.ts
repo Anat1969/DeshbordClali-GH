@@ -70,6 +70,47 @@ async function extract(b: { text?: string; mime?: string; data?: string; categor
   }
 }
 
+// חילוץ כל האירועים מצילום מסך של יומן (למשל יומן העבודה): מחזיר רשימה
+const manyPrompt = (cats: string[] = []) => `אתה קורא צילום מסך של יומן ומחלץ ממנו את כל האירועים.
+החזר JSON בלבד, בלי הסבר ובלי גדרות קוד, בפורמט הזה:
+{"events":[{
+  "title": "הנושא של הפגישה כפי שכתוב",
+  "event_date": "YYYY-MM-DD" | null,
+  "event_time": "HH:MM" | null,
+  "location": "מיקום" | null,
+  "people": ["שם1"],
+  "description": "תיאור קצר בעברית או null"${cats.length ? `,
+  "category_name": אחד מהשמות האלה בדיוק: ${cats.map((c) => `"${c}"`).join(", ")}, או null` : ""}
+}]}
+היום ${todayIL()}. קבעי את התאריך של כל אירוע לפי כותרות העמודות או הימים בצילום. תאריך בלי שנה הוא התאריך הקרוב הבא.
+שעת התחלה בלבד, בפורמט 24 שעות. אירוע של יום שלם: event_time הוא null.
+אל תמציא אירועים ואל תכלול אירוע שאי אפשר לקרוא. אם אין אירועים, events הוא רשימה ריקה.`
+
+async function extractMany(b: { mime?: string; data?: string; categories?: string[] }) {
+  const cats = Array.isArray(b.categories) ? b.categories.filter((c) => typeof c === 'string').slice(0, 7) : []
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY')
+  if (!apiKey) return json({ error: 'no_anthropic_key' }, 503)
+  if (typeof b.mime !== 'string' || !/^image\/(png|jpe?g|webp|gif)$/.test(b.mime) || !b.data) return json({ error: 'bad_input' }, 400)
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: b.mime, data: b.data } }, { type: 'text', text: manyPrompt(cats) }] }],
+    }),
+  })
+  if (!res.ok) return json({ error: 'extraction_failed', status: res.status }, 502)
+  const out = await res.json()
+  const raw: string = out.content?.find((c: { type: string }) => c.type === 'text')?.text ?? ''
+  try {
+    const parsed = JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1))
+    return json({ events: Array.isArray(parsed.events) ? parsed.events.slice(0, 40) : [] })
+  } catch {
+    return json({ error: 'unparsable' }, 502)
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return json({ error: 'method' }, 405)
@@ -159,6 +200,9 @@ Deno.serve(async (req) => {
 
     case 'extract':
       return await extract(b)
+
+    case 'extract_many':
+      return await extractMany(b)
 
     case 'rotate': {
       // מפתח חדש מחליף את הישן מיד, וכל הנתונים נשארים

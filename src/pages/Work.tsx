@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Icon, { IconButton } from '../components/Icon'
 import VoiceButton from '../components/VoiceButton'
 import { useSpeech } from '../hooks/useSpeech'
@@ -6,7 +6,8 @@ import { useApp } from '../lib/ctx'
 import { SLOTS } from '../lib/categories'
 import { createTask } from '../lib/tasks'
 import { getContacts, gmailUrl, interpret, saveContacts, whatsappUrl, type Contact, type WorkAction } from '../lib/work'
-import { emptyDraft } from '../types'
+import { extractMany } from '../lib/claude'
+import { emptyDraft, type EventDraft } from '../types'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -19,6 +20,8 @@ export default function Work() {
   const [res, setRes] = useState<{ reply: string; actions: WorkAction[] } | null>(null)
   const [err, setErr] = useState<string | null>(null)
   const [contacts, setContacts] = useState<Contact[]>([])
+  const [shot, setShot] = useState<{ url: string; busy: boolean; drafts: EventDraft[] } | null>(null)
+  const picker = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     getContacts().then(setContacts).catch(() => { /* אין אנשי קשר עדיין */ })
@@ -41,6 +44,24 @@ export default function Work() {
     }
   }
 
+  // תמונה שהודבקה, נגררה או נבחרה: קוראים ממנה את כל האירועים ומציגים לאישור
+  const readShot = async (file: File) => {
+    if (!file.type.startsWith('image/')) return app.toast('צריך תמונה: PNG, JPG או WEBP')
+    if (shot?.url) URL.revokeObjectURL(shot.url)
+    setErr(null)
+    setRes(null)
+    setShot({ url: URL.createObjectURL(file), busy: true, drafts: [] })
+    try {
+      const drafts = await extractMany(file, app.cats.names)
+      setShot((s) => s && { ...s, busy: false, drafts })
+      if (!drafts.length) setErr('לא מצאתי אירועים בתמונה. אפשר לנסות תמונה חדה יותר.')
+    } catch (e) {
+      setShot((s) => s && { ...s, busy: false })
+      setErr(e instanceof Error ? e.message : 'קריאת התמונה נכשלה')
+    }
+  }
+  const imageOf = (files?: FileList | null) => Array.from(files ?? []).find((f) => f.type.startsWith('image/'))
+
   const persist = async (next: Contact[]) => {
     setContacts(next)
     try { await saveContacts(next) } catch { app.toast('שמירת איש הקשר נכשלה') }
@@ -53,7 +74,14 @@ export default function Work() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+    <div
+      className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        const f = imageOf(e.dataTransfer.files)
+        if (f) { e.preventDefault(); readShot(f) }
+      }}
+    >
       <h1 className="flex items-center gap-3 text-3xl font-light"><Icon name="spark" size={28} />מסך <b>עבודה</b></h1>
       <p className="mb-5 mt-1 text-mute">כתבי או אמרי מה לעשות. אני מכין את הפעולה, ואת מאשרת לפני שהיא יוצאת.</p>
 
@@ -61,18 +89,31 @@ export default function Work() {
         className="field resize-none text-lg"
         rows={3}
         value={cmd}
-        placeholder="מה לעשות?"
+        placeholder="מה לעשות? אפשר גם להדביק כאן תמונה, למשל צילום מסך של היומן"
         aria-label="מה לעשות"
         onChange={(e) => setCmd(e.target.value)}
+        onPaste={(e) => {
+          const f = imageOf(e.clipboardData.files)
+          if (f) { e.preventDefault(); readShot(f) }
+        }}
         onKeyDown={(e) => (e.ctrlKey || e.metaKey) && e.key === 'Enter' && run()}
       />
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-        <VoiceButton speech={speech} label="הקלטת בקשה" />
+        <div className="flex flex-wrap gap-2">
+          <VoiceButton speech={speech} label="הקלטת בקשה" />
+          <button type="button" className="btn" onClick={() => picker.current?.click()}>
+            <Icon name="upload" size={16} />
+            תמונה
+          </button>
+          <input ref={picker} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) readShot(f); e.target.value = '' }} />
+        </div>
         <button type="button" className="btn btn-primary min-h-12 min-w-36" disabled={!cmd.trim() || busy} onClick={run}>
           <Icon name="send" size={18} />
           {busy ? 'מכין...' : 'ביצוע'}
         </button>
       </div>
+
+      {shot && <Shot shot={shot} onClose={() => { URL.revokeObjectURL(shot.url); setShot(null) }} />}
 
       {err && <p className="mt-5 rounded-lg bg-[#FBECEA] p-3 text-bad" role="alert">{err}</p>}
       {busy && <div className="skeleton mt-5 h-32" aria-busy="true" />}
@@ -90,6 +131,74 @@ export default function Work() {
 
       <Contacts contacts={contacts} onChange={persist} />
     </div>
+  )
+}
+
+// תוצאת קריאת תמונה: כל אירוע בכרטיס משלו, עם הוספה בודדת או הוספת הכול ליומן
+function Shot({ shot, onClose }: { shot: { url: string; busy: boolean; drafts: EventDraft[] }; onClose: () => void }) {
+  const app = useApp()
+  const [items, setItems] = useState<EventDraft[]>([])
+  const [added, setAdded] = useState<Set<number>>(new Set())
+  const [failed, setFailed] = useState(false)
+  useEffect(() => { setItems(shot.drafts); setAdded(new Set()) }, [shot.drafts])
+
+  const patch = (i: number, p: Partial<EventDraft>) => setItems((l) => l.map((d, k) => (k === i ? { ...d, ...p } : d)))
+  const ready = (d: EventDraft) => !!d.event_date && !!d.title.trim()
+  const addOne = async (i: number) => {
+    try {
+      await app.ev.add(items[i])
+      setAdded((s) => new Set(s).add(i))
+      return true
+    } catch {
+      setFailed(true)
+      return false
+    }
+  }
+  const addAll = async () => {
+    setFailed(false)
+    let n = 0
+    for (let i = 0; i < items.length; i++) if (!added.has(i) && ready(items[i]) && (await addOne(i))) n++
+    if (n) app.toast(n === 1 ? 'אירוע אחד נוסף ליומן' : `${n} אירועים נוספו ליומן`)
+  }
+  const pending = items.filter((d, i) => !added.has(i) && ready(d)).length
+
+  return (
+    <section className="mt-6" aria-label="אירועים מהתמונה">
+      <Frame icon="calendar" title="אירועים שנקראו מהתמונה">
+        <div className="flex items-start gap-3">
+          <img src={shot.url} alt="התמונה שהודבקה" className="h-20 w-28 shrink-0 rounded-lg bg-soft object-cover" />
+          <p className="min-w-0 flex-1 text-lg font-semibold">
+            {shot.busy ? 'קורא את התמונה...' : items.length ? `נמצאו ${items.length} אירועים. בדקי ואשרי לפני ההוספה.` : 'לא נמצאו אירועים'}
+          </p>
+          <IconButton name="x" label="סגירת התמונה" size={16} className="!h-8 !w-8" onClick={onClose} />
+        </div>
+        {shot.busy && <div className="skeleton mt-4 h-24" aria-busy="true" />}
+        <ul className="m-0 mt-4 grid list-none gap-3 p-0">
+          {items.map((d, i) => (
+            <li key={i} className={`rounded-lg bg-soft/70 p-3 ${added.has(i) ? 'opacity-60' : ''}`}>
+              <input className="field font-semibold" value={d.title} aria-label="נושא" disabled={added.has(i)} onChange={(e) => patch(i, { title: e.target.value })} />
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <input type="date" className={`field num ${d.event_date ? '' : 'invalid'}`} value={d.event_date ?? ''} aria-label="תאריך" disabled={added.has(i)} onChange={(e) => patch(i, { event_date: e.target.value || null })} />
+                <input type="time" className="field num" value={d.event_time ?? ''} aria-label="שעה" disabled={added.has(i)} onChange={(e) => patch(i, { event_time: e.target.value || null })} />
+              </div>
+              {!d.event_date && <p className="mt-1 text-sm text-bad">לא זיהיתי תאריך. בחרי תאריך כדי להוסיף.</p>}
+              {d.location && <p className="mt-2 text-sm text-mute">{d.location}</p>}
+              <button type="button" className="btn mt-2" disabled={added.has(i) || !ready(d)} onClick={() => addOne(i).then((ok) => ok && app.toast('נוסף ליומן'))}>
+                <Icon name={added.has(i) ? 'check' : 'plus'} size={16} />
+                {added.has(i) ? 'נוסף' : 'הוספה ליומן'}
+              </button>
+            </li>
+          ))}
+        </ul>
+        {failed && <p className="mt-3 text-sm text-bad" role="alert">חלק מההוספות נכשלו. אפשר לנסות שוב.</p>}
+        {pending > 1 && (
+          <button type="button" className="btn btn-primary mt-4" onClick={addAll}>
+            <Icon name="plus" size={16} />
+            הוספת כל {pending} האירועים ליומן
+          </button>
+        )}
+      </Frame>
+    </section>
   )
 }
 
