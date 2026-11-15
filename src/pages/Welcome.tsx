@@ -53,7 +53,7 @@ export default function Welcome() {
     <div className="w-full">
       {ready ? (
         <MorningBrief brief={brief} dateLine={dateLine}>
-          <Link to="/calendar" className="btn btn-primary shrink-0">
+          <Link to="/calendar" className="btn btn-primary btn-float shrink-0">
             כניסה ליומן
             <Icon name="chevronL" size={18} />
           </Link>
@@ -65,7 +65,7 @@ export default function Welcome() {
       <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <QuickLinks />
-          <Link to="/projects" className="btn gap-2 text-navy"><Icon name="chart" size={18} />מעקב פרויקטים</Link>
+          <Link to="/projects" className="btn btn-float gap-2 text-navy" style={{ animationDelay: '-1.6s' }}><Icon name="chart" size={18} />מעקב פרויקטים</Link>
         </div>
 
         <h2 className="mb-4 mt-10 text-3xl font-light">השראה להיום <span className="text-lg text-mute">מהאפליקציות שלך</span></h2>
@@ -89,7 +89,7 @@ export default function Welcome() {
         </div>
 
         <div className="mt-10 text-center">
-          <Link to="/calendar" className="btn btn-primary min-h-12 px-8 text-lg">
+          <Link to="/calendar" className="btn btn-primary btn-float min-h-12 px-8 text-lg">
             כניסה ליומן
             <Icon name="chevronL" size={20} />
           </Link>

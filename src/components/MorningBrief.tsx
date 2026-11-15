@@ -9,7 +9,6 @@ const INK = '#2E2C27'
 const SOFT = '#6B6A63'
 const GREY = '#B4B3A8'
 const CLAY = '#C6613F'
-const SERIF = '"Frank Ruhl Libre","David Libre","Noto Serif Hebrew",Georgia,"Times New Roman",serif'
 
 const W = 840
 const H = 170
@@ -80,13 +79,13 @@ function Terrain({ brief }: { brief: Brief }) {
 function Items({ title, items, important }: { title: string; items: BriefItem[]; important?: boolean }) {
   return (
     <section aria-label={title}>
-      <h2 className="mb-4 text-2xl font-semibold" style={{ color: INK }}><span className={important ? 'marker-lg' : ''}>{title}</span></h2>
+      <h2 className="hand mb-4 text-4xl" style={{ color: INK }}><span className={important ? 'marker-lg' : ''}>{title}</span></h2>
       <ol className="m-0 grid list-none gap-4 p-0">
         {items.map((it, i) => (
           <li key={i} className="rise flex items-start gap-3" style={{ '--d': `${i * 90}ms` } as React.CSSProperties}>
             <span className="num w-6 shrink-0 text-lg font-semibold" style={{ color: important ? CLAY : GREY }}>{i + 1}.</span>
             <div className="min-w-0">
-              <p className="m-0 break-words text-xl font-semibold" style={{ color: INK }}>
+              <p className="hand m-0 break-words text-3xl" style={{ color: INK }}>
                 <span className={important ? 'marker' : ''}>{it.to ? <Link to={it.to} className="hover:underline">{it.title}</Link> : it.title}</span>
               </p>
               <Sentences text={it.text} className="mt-1 text-[17px] leading-relaxed" />
@@ -108,21 +107,21 @@ export default function MorningBrief({ brief, dateLine, children }: { brief: Bri
   return (
     <>
       {/* הרצועה העליונה: תאריך, כותרת, ציור היום ושלושה פרקים */}
-      <section className="hero-drift w-full px-4 py-8 sm:px-8 sm:py-10" style={{ borderBottom: '1px solid #E1E1DF' }} aria-label="תדרוך בוקר">
+      <section className="w-full bg-white px-4 py-8 sm:px-8 sm:py-10" style={{ borderBottom: '1px solid #E1E1DF' }} aria-label="תדרוך בוקר">
         <div className="mx-auto max-w-[860px]">
           <div className="flex items-start justify-between gap-4">
-            <p className="m-0 text-lg font-semibold" style={{ color: SOFT }}>{dateLine}</p>
+            <p className="m-0 text-xl font-semibold" style={{ color: SOFT }}>{dateLine}</p>
             {children}
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-            <h1 className="rise m-0 min-w-0 flex-1 basis-72 text-[34px] font-semibold leading-snug sm:text-[48px]" style={{ color: INK, fontFamily: SERIF }}>{brief.headline}</h1>
+            <h1 className="rise m-0 min-w-0 flex-1 basis-72 text-[34px] font-semibold leading-snug sm:text-[48px]" style={{ color: INK, fontFamily: '"Gveret Levin", Heebo, cursive', fontWeight: 400 }}>{brief.headline}</h1>
             <div className="rise" style={{ '--d': '250ms' } as React.CSSProperties}><Clock size={176} /></div>
           </div>
           <div className="mt-5"><Terrain brief={brief} /></div>
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             {brief.acts.map((a, i) => (
               <div key={i} className={`rise min-w-0 py-1 sm:px-4 sm:first:ps-0 sm:last:pe-0 ${i ? 'max-sm:border-t max-sm:pt-4 sm:border-s' : ''} border-[#E4E3DC]`} style={{ '--d': `${900 + i * 150}ms` } as React.CSSProperties}>
-                <p className="m-0 text-lg font-semibold" style={{ color: INK }}><span className="marker">{a.range}</span></p>
+                <p className="num m-0 text-2xl font-semibold" style={{ color: INK }}><span className="marker">{a.range}</span></p>
                 <Sentences text={a.text} className="mt-1.5 text-[17px] leading-relaxed" />
               </div>
             ))}
