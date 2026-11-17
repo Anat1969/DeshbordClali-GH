@@ -5,6 +5,7 @@ import ExtractionReview from './components/ExtractionReview'
 import { PasteDialog } from './components/UploadZone'
 import { formatLong } from './lib/dateUtils'
 import Home from './pages/Home'
+import Day from './pages/Day'
 import EventDetail from './pages/EventDetail'
 import Settings from './pages/Settings'
 import Welcome from './pages/Welcome'
@@ -85,7 +86,8 @@ export default function App() {
           <main className="flex min-h-0 flex-1 flex-col overflow-auto">
             <Routes>
               {/* בפעם הראשונה בכל יום נפתח דף ההשראה */}
-              <Route path="/" element={seenToday() ? <Home uploading={up.stage === 'working'} step={up.step} /> : <Navigate to="/welcome" replace />} />
+              <Route path="/" element={seenToday() ? <Home /> : <Navigate to="/welcome" replace />} />
+              <Route path="/day" element={<Day uploading={up.stage === 'working'} step={up.step} />} />
               <Route path="/welcome" element={<Welcome />} />
               <Route path="/work" element={<Work />} />
               <Route path="/projects" element={<Projects />} />

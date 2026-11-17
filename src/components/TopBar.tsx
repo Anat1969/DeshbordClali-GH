@@ -7,6 +7,7 @@ import { demoMode } from '../lib/supabase'
 // כפתורי גישה ישירה למסכים. בנייד: אייקונים בלבד. במסך רחב: אייקון ושם
 const NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/', label: 'יומן', icon: 'calendar', end: true },
+  { to: '/day', label: 'היום והעלאה', icon: 'plus' },
   { to: '/welcome', label: 'תדרוך בוקר', icon: 'sun' },
   { to: '/work', label: 'מסך עבודה', icon: 'spark' },
   { to: '/projects', label: 'מעקב פרויקטים', icon: 'chart' },
