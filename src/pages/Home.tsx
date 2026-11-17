@@ -1,19 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import CalendarMonthView from '../components/CalendarMonthView'
-import EventCard from '../components/EventCard'
 import EventModal from '../components/EventModal'
-import UploadZone from '../components/UploadZone'
-import Icon, { IconButton } from '../components/Icon'
+import Icon from '../components/Icon'
 import QuickLinks from '../components/QuickLinks'
 import { Link, useLocation } from 'react-router-dom'
 import { useApp } from '../lib/ctx'
-import TaskList from '../components/TaskList'
-import { VIEW_STEP, addDays, daysUntil, formatLong, formatShort, formatTime, relativeDays, todayIso, type ViewMode } from '../lib/dateUtils'
+import { VIEW_STEP, addDays, daysUntil, formatShort, formatTime, relativeDays, todayIso, type ViewMode } from '../lib/dateUtils'
 import { milestoneMap } from '../lib/projects'
 import type { CalEvent } from '../types'
 
-// הבית: כותרת עם המסקנה, לוח חודשי, ומימין פאנל של היום שנבחר והעלאה
-export default function Home({ uploading, step }: { uploading: boolean; step: string }) {
+// הבית: כותרת עם המסקנה ולוח חודשי ברוחב מלא
+export default function Home() {
   const app = useApp()
   const { events, loading, error, flashId, reload } = app.ev
   // העוגן הוא מרכז החלון. ברירת מחדל: היום
@@ -42,10 +39,8 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
 
   // אבני דרך של פרויקטים, לפי תאריך
   const milestones = useMemo(() => milestoneMap(app.projects.projects), [app.projects.projects])
-  const dayMarks = milestones.get(selected) ?? []
 
   const next = useMemo(() => events.find((e) => daysUntil(e.event_date) >= 0), [events])
-  const day = events.filter((e) => e.event_date === selected)
   // החלון תמיד מציג את הגרסה העדכנית של האירוע
   const openLive = open ? events.find((e) => e.id === open.id) ?? null : null
 
@@ -91,12 +86,13 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
       {/* קישורים חשובים ומסך עבודה */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <QuickLinks />
+        <Link to={`/day?d=${selected}`} className="btn gap-2 text-navy"><Icon name="calendar" size={18} />היום שנבחר והעלאה</Link>
         <Link to="/work" className="btn gap-2 text-navy"><Icon name="spark" size={18} />מסך עבודה</Link>
       </div>
 
-      {/* יחס שני שלישים ליומן ושליש למשימות */}
-      <div className="flex flex-1 flex-col gap-6 lg:grid lg:min-h-0 lg:grid-cols-3 lg:grid-rows-[minmax(0,1fr)]">
-        <div className="flex min-h-[420px] flex-1 flex-col lg:col-span-2 lg:min-h-0">
+      {/* הלוח תופס את כל רוחב המסך. היום שנבחר, ההעלאה והמשימות בדף נפרד */}
+      <div className="flex flex-1 flex-col lg:min-h-0">
+        <div className="flex min-h-[420px] flex-1 flex-col lg:min-h-0">
           {loading ? (
             <div className="skeleton flex-1" />
           ) : (
@@ -119,38 +115,6 @@ export default function Home({ uploading, step }: { uploading: boolean; step: st
           )}
         </div>
 
-        <aside className="flex w-full shrink-0 flex-col gap-4 lg:col-span-1 lg:min-h-0 lg:overflow-auto">
-          <UploadZone onFile={app.fromFile} onPaste={app.openPaste} onPick={app.pickFile} onVoice={app.openVoice} busy={uploading} step={step} />
-          <section aria-label="אירועי היום שנבחר">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="text-lg font-light">{formatLong(selected)}</h2>
-              <IconButton name="plus" label="הוספת אירוע ליום הזה" tone="primary" size={20} className="!h-10 !w-10" onClick={() => app.newManual(selected)} />
-            </div>
-            {dayMarks.length > 0 && (
-              <ul className="m-0 mb-2 grid list-none gap-2 p-0" aria-label="אבני דרך ביום הזה">
-                {dayMarks.map((m, i) => (
-                  <li key={i} className={`flex items-start gap-2 rounded-lg border-2 border-dashed border-navy bg-white p-2.5 ${m.done ? 'text-mute line-through' : ''}`}>
-                    <Icon name={m.done ? 'check' : 'diamond'} size={16} className="mt-1 shrink-0 text-navy" />
-                    <span className="min-w-0 break-words"><b className="text-[#111111]">{m.name}</b><br /><span className="text-sm text-mute">אבן דרך בפרויקט {m.projectName}</span></span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {day.length > 0 ? (
-              <div className="grid gap-2">
-                {day.map((e) => (
-                  <EventCard key={e.id} event={e} flash={flashId === e.id} onOpen={() => setOpen(e)} />
-                ))}
-              </div>
-            ) : dayMarks.length === 0 && (
-              <div className="rounded-lg bg-soft p-4 text-mute">
-                <p>אין אירועים ביום הזה.</p>
-                <p className="mt-1 text-sm">לחיצה כפולה על יום בלוח, או על +, מוסיפה אירוע ישר לתאריך.</p>
-              </div>
-            )}
-          </section>
-          <TaskList />
-        </aside>
       </div>
 
       {openLive && <EventModal event={openLive} onClose={() => setOpen(null)} />}
