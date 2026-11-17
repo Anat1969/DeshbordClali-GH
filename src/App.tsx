@@ -19,6 +19,7 @@ import { useQuickLinks } from './hooks/useQuickLinks'
 import { useProjects } from './hooks/useProjects'
 import Work from './pages/Work'
 import Projects from './pages/Projects'
+import Upgrades from './pages/Upgrades'
 import { demoMode } from './lib/supabase'
 
 export default function App() {
@@ -88,6 +89,7 @@ export default function App() {
               <Route path="/welcome" element={<Welcome />} />
               <Route path="/work" element={<Work />} />
               <Route path="/projects" element={<Projects />} />
+              <Route path="/upgrades" element={<Upgrades />} />
               <Route path="/event/:id" element={<EventDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<p className="p-8">הדף לא נמצא. אפשר לחזור ליומן דרך שם האפליקציה למעלה.</p>} />

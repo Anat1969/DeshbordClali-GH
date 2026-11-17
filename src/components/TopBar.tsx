@@ -10,6 +10,7 @@ const NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/welcome', label: 'תדרוך בוקר', icon: 'sun' },
   { to: '/work', label: 'מסך עבודה', icon: 'spark' },
   { to: '/projects', label: 'מעקב פרויקטים', icon: 'chart' },
+  { to: '/upgrades', label: 'שדרוג אפליקציות', icon: 'target' },
 ]
 
 // סרגל עליון קבוע: תפריט <ai-menu> מימין, כפתורי המסכים באמצע, והלוגו משמאל. הלוגו מחזיר לדף הבית

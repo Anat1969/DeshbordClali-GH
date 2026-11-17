@@ -55,6 +55,7 @@ export default function AIMenu() {
           <Item icon="plus" onClick={act(() => app.newManual())}>אירוע ידני</Item>
  <Link role="menuitem" to="/work" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 hover:bg-soft"><Icon name="spark" size={18} />מסך עבודה</Link>
           <Link role="menuitem" to="/projects" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 hover:bg-soft"><Icon name="chart" size={18} />מעקב פרויקטים</Link>
+          <Link role="menuitem" to="/upgrades" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 hover:bg-soft"><Icon name="target" size={18} />שדרוג אפליקציות</Link>
           <Link role="menuitem" to="/welcome" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 hover:bg-soft"><Icon name="sun" size={18} />תדרוך בוקר והשראה</Link>
           <div className="px-3 pb-1 pt-3 text-xs text-mute">מערכת</div>
           <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2.5 hover:bg-soft">
