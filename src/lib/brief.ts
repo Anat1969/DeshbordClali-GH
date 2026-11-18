@@ -103,9 +103,6 @@ export function buildBrief(o: { events: CalEvent[]; tasks: Task[]; projects: Pro
     const d = daysUntil(p.due_date!, today)
     needs.push({ title: `${p.name}: ${d === 0 ? 'המועד היום' : `בעוד ${d} ימים`}`, text: pText(p), to: '/projects' })
   }
-  const open = tasks.filter((t) => !t.done).sort((a, b) => (a.created_at < b.created_at ? -1 : 1))
-  for (const t of open.slice(0, 4)) needs.push({ title: t.text, text: `במשימות: נרשמה ${ago(t.created_at, today)}${t.note ? `. הערה: ${t.note}` : ''}.${(t.docs ?? []).length ? ` יש ${(t.docs ?? []).length} מסמכים לביצוע.` : ''}`, to: '/', docs: (t.docs ?? []).map((doc) => ({ taskId: t.id, doc })) })
-  if (open.length > 4) needs.push({ title: `ועוד ${open.length - 4} משימות פתוחות`, text: 'ברשימת המשימות ביומן.', to: '/calendar' })
   const stalled = active.filter((x) => x.status === 'active' && Date.now() - new Date(x.updated_at).getTime() >= 7 * 86400000 && !(x.due_date && daysUntil(x.due_date, today) <= 7)).slice(0, 2)
   for (const p of stalled) needs.push({ title: `${p.name}: לא עודכן שבוע`, text: pText(p), to: '/projects' })
 

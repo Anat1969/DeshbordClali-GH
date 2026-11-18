@@ -5,11 +5,11 @@ import VoiceButton from './VoiceButton'
 import { useSpeech } from '../hooks/useSpeech'
 
 // אזור גרירה: מסגרת מקווקווה שזזה כשקובץ מגיע. לחיצה פותחת בחירת קובץ
-export default function UploadZone({ onFile, onPaste, onPick, onVoice, busy, step }: { onFile: (f: File) => void; onPaste: () => void; onPick: () => void; onVoice: () => void; busy: boolean; step: string }) {
+export default function UploadZone({ onFile, onPaste, onPick, onVoice, busy, step, compact }: { onFile: (f: File) => void; onPaste: () => void; onPick: () => void; onVoice: () => void; busy: boolean; step: string; compact?: boolean }) {
   const [over, setOver] = useState(false)
   return (
     <div
-      className={`dropzone flex flex-col items-center justify-center gap-2 p-5 text-center ${over ? 'active' : ''}`}
+      className={`dropzone flex ${compact ? 'flex-row flex-wrap gap-2 p-2.5' : 'flex-col gap-2 p-5'} items-center justify-center text-center ${over ? 'active' : ''}`}
       onDragOver={(e) => (e.preventDefault(), setOver(true))}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => {
@@ -23,9 +23,13 @@ export default function UploadZone({ onFile, onPaste, onPick, onVoice, busy, ste
         <p className="py-4 font-semibold text-navy" role="status">{step}...</p>
       ) : (
         <>
-          <p className="text-lg font-light">{over ? 'עזבי כאן' : 'זרקי לכאן מסמך'}</p>
-          <p className="text-sm text-mute">PDF, תמונה, אימייל או טקסט. הפרטים יחולצו לאישור שלך.</p>
-          <div className="mt-2 flex flex-wrap justify-center gap-2">
+          {compact ? <p className="m-0 text-sm text-mute">{over ? 'עזבי כאן' : 'זרקי מסמך:'}</p> : (
+            <>
+              <p className="text-lg font-light">{over ? 'עזבי כאן' : 'זרקי לכאן מסמך'}</p>
+              <p className="text-sm text-mute">PDF, תמונה, אימייל או טקסט. הפרטים יחולצו לאישור שלך.</p>
+            </>
+          )}
+          <div className={`${compact ? '' : 'mt-2'} flex flex-wrap justify-center gap-2`}>
             <button type="button" className="btn btn-primary" onClick={onPick}>
               <Icon name="upload" size={16} />
               בחירת קובץ

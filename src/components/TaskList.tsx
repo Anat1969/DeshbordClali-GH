@@ -13,7 +13,7 @@ type Filter = 'all' | 'open' | 'done'
 const FILTERS: [Filter, string][] = [['all', 'הכול'], ['open', 'פתוחות'], ['done', 'בוצעו']]
 
 // רשימת משימות בצד: הקלדה או הקלטה, קו חוצה על משימה שבוצעה, והערה לכל משימה
-export default function TaskList() {
+export default function TaskList({ page }: { page?: boolean } = {}) {
   const app = useApp()
   const { tasks, loading, error, reload, add, patch, remove, addLink, addFile, removeDoc } = useTasks()
   const [text, setText] = useState('')
@@ -40,7 +40,7 @@ export default function TaskList() {
   }
 
   return (
-    <section aria-label="רשימת משימות" className="flex min-h-0 flex-col rounded-lg bg-soft/60 p-3.5 lg:flex-1">
+    <section aria-label="רשימת משימות" className={`flex min-h-0 flex-col rounded-lg bg-soft/60 ${page ? 'p-5 text-lg' : 'p-3.5 lg:flex-1'}`}>
       <div className="mb-3 flex items-baseline justify-between">
         <h2 className="text-lg font-light">משימות</h2>
         <span className="text-sm text-mute">
@@ -75,7 +75,7 @@ export default function TaskList() {
         </p>
       )}
 
-      <ul className="m-0 mt-3 flex max-h-[420px] min-h-0 list-none flex-col gap-2 overflow-auto p-0 lg:max-h-none lg:flex-1">
+      <ul className={`m-0 mt-3 flex min-h-0 list-none flex-col gap-2 p-0 ${page ? '' : 'max-h-[420px] overflow-auto lg:max-h-none lg:flex-1'}`}>
         {loading && <li className="skeleton h-12" />}
         {!loading && shown.length === 0 && (
           <li className="rounded-lg bg-white p-3 text-sm text-mute">

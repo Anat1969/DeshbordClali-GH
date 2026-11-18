@@ -103,7 +103,7 @@ function Items({ title, items, important }: { title: string; items: BriefItem[];
   )
 }
 
-export default function MorningBrief({ brief, dateLine, children }: { brief: Brief; dateLine: string; children?: React.ReactNode }) {
+export default function MorningBrief({ brief, dateLine, children, extra }: { brief: Brief; dateLine: string; children?: React.ReactNode; extra?: React.ReactNode }) {
   return (
     <>
       {/* הרצועה העליונה: תאריך, כותרת, ציור היום ושלושה פרקים */}
@@ -115,7 +115,7 @@ export default function MorningBrief({ brief, dateLine, children }: { brief: Bri
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
             <h1 className="rise m-0 min-w-0 flex-1 basis-72 text-[34px] font-semibold leading-snug sm:text-[48px]" style={{ color: INK, fontFamily: '"Gveret Levin", Heebo, cursive', fontWeight: 400 }}>{brief.headline}</h1>
-            <div className="rise" style={{ '--d': '250ms' } as React.CSSProperties}><Clock size={176} /></div>
+            <div className="rise flex flex-wrap items-center gap-5" style={{ '--d': '250ms' } as React.CSSProperties}><Clock size={176} />{extra}</div>
           </div>
           <div className="mt-5"><Terrain brief={brief} /></div>
           <div className="mt-4 grid gap-4 sm:grid-cols-3">

@@ -17,6 +17,7 @@ import { useQuickLinks } from './hooks/useQuickLinks'
 import { useProjects } from './hooks/useProjects'
 import Work from './pages/Work'
 import Projects from './pages/Projects'
+import Tasks from './pages/Tasks'
 
 export default function App() {
   const access = useAccess()
@@ -82,6 +83,7 @@ export default function App() {
               <Route path="/" element={<Welcome />} />
               <Route path="/welcome" element={<Navigate to="/" replace />} />
               <Route path="/calendar" element={<Home uploading={up.stage === 'working'} step={up.step} />} />
+              <Route path="/tasks" element={<Tasks />} />
               <Route path="/work" element={<Work />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/event/:id" element={<EventDetail />} />

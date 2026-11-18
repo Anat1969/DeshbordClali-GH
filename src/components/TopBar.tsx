@@ -8,6 +8,7 @@ import { demoMode } from '../lib/supabase'
 const NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/', label: 'דף בית', icon: 'sun', end: true },
   { to: '/calendar', label: 'יומן', icon: 'calendar' },
+  { to: '/tasks', label: 'משימות', icon: 'check' },
   { to: '/work', label: 'מסך עבודה', icon: 'spark' },
   { to: '/projects', label: 'מעקב פרויקטים', icon: 'chart' },
 ]

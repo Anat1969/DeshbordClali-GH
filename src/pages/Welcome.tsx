@@ -4,6 +4,9 @@ import Icon, { type IconName } from '../components/Icon'
 import MorningBrief from '../components/MorningBrief'
 import QuickLinks from '../components/QuickLinks'
 import Sentences from '../components/Sentences'
+import MiniCalendar from '../components/MiniCalendar'
+import HomeTasks from '../components/HomeTasks'
+import { milestoneMap } from '../lib/projects'
 import { useApp } from '../lib/ctx'
 import { useTasks } from '../hooks/useTasks'
 import { buildBrief } from '../lib/brief'
@@ -33,7 +36,7 @@ const ROWS: { kinds: InspireCard['kind'][]; grid: string }[] = [
 // דף פתיחה: מה היום, מה מחר (כדי להתכונן), משימות פתוחות ומה בוצע אתמול, והשראה מהאפליקציות
 export default function Welcome() {
   const app = useApp()
-  const { tasks } = useTasks()
+  const { tasks, patch } = useTasks()
   const projects = app.projects.projects
   const [cards, setCards] = useState<InspireCard[] | null>(null)
   const [failed, setFailed] = useState(false)
@@ -46,13 +49,15 @@ export default function Welcome() {
   }, [])
 
   // תדרוך הבוקר מחושב מהאירועים, המשימות והפרויקטים
+  // ימים עם אבן דרך, לסימון בלוח הקטן
+  const marked = useMemo(() => new Set(milestoneMap(app.projects.projects).keys()), [app.projects.projects])
   const brief = useMemo(() => buildBrief({ events: app.ev.events, tasks, projects, today, name: 'ענת' }), [app.ev.events, tasks, projects, today])
   const dateLine = `${formatShort(today).split(',')[0]} · ${formatLong(today).replace(/^[^,]+, /, '')}`
 
   return (
     <div className="w-full">
       {ready ? (
-        <MorningBrief brief={brief} dateLine={dateLine}>
+        <MorningBrief brief={brief} dateLine={dateLine} extra={<MiniCalendar events={app.ev.events} marked={marked} />}>
           <Link to="/calendar" className="btn btn-primary btn-float shrink-0">
             כניסה ליומן
             <Icon name="chevronL" size={18} />
@@ -61,6 +66,8 @@ export default function Welcome() {
       ) : (
         <div className="mx-auto max-w-[860px] px-4 py-10"><div className="skeleton h-64" aria-busy="true" /></div>
       )}
+
+      <HomeTasks tasks={tasks} onPatch={patch} />
 
       <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
