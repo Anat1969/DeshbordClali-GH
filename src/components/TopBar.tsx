@@ -11,6 +11,7 @@ const NAV: { to: string; label: string; icon: IconName; end?: boolean }[] = [
   { to: '/tasks', label: 'משימות', icon: 'check' },
   { to: '/work', label: 'מסך עבודה', icon: 'spark' },
   { to: '/projects', label: 'מעקב פרויקטים', icon: 'chart' },
+  { to: '/upgrades', label: 'שדרוג אפליקציות', icon: 'target' },
 ]
 
 // סרגל עליון קבוע: תפריט <ai-menu> מימין, כפתורי המסכים באמצע, והלוגו משמאל. הלוגו מחזיר לדף הבית

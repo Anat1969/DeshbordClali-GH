@@ -5,6 +5,7 @@ import ExtractionReview from './components/ExtractionReview'
 import { PasteDialog } from './components/UploadZone'
 import { formatLong } from './lib/dateUtils'
 import Home from './pages/Home'
+import Day from './pages/Day'
 import EventDetail from './pages/EventDetail'
 import Settings from './pages/Settings'
 import Welcome from './pages/Welcome'
@@ -18,6 +19,7 @@ import { useProjects } from './hooks/useProjects'
 import Work from './pages/Work'
 import Projects from './pages/Projects'
 import Tasks from './pages/Tasks'
+import Upgrades from './pages/Upgrades'
 
 export default function App() {
   const access = useAccess()
@@ -83,9 +85,11 @@ export default function App() {
               <Route path="/" element={<Welcome />} />
               <Route path="/welcome" element={<Navigate to="/" replace />} />
               <Route path="/calendar" element={<Home uploading={up.stage === 'working'} step={up.step} />} />
+              <Route path="/day" element={<Day uploading={up.stage === 'working'} step={up.step} />} />
               <Route path="/tasks" element={<Tasks />} />
               <Route path="/work" element={<Work />} />
               <Route path="/projects" element={<Projects />} />
+              <Route path="/upgrades" element={<Upgrades />} />
               <Route path="/event/:id" element={<EventDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<p className="p-8">הדף לא נמצא. אפשר לחזור ליומן דרך שם האפליקציה למעלה.</p>} />
