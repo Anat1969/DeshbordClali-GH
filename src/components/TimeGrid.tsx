@@ -75,7 +75,7 @@ export default function TimeGrid({ days, events, milestones, selected, nextId, f
       <div className="grid border-b border-[#E3E6EB]" style={{ gridTemplateColumns: cols }}>
         <div />
         {days.map((iso) => (
-          <button key={iso} type="button" onClick={() => onSelect(iso)} className={`px-1 py-1.5 text-center ${iso === selected ? 'shadow-[inset_0_-4px_0_#1A2B4A]' : ''} ${iso === today ? 'bg-[#F2F3F5] font-semibold' : ''}`}>
+          <button key={iso} type="button" onClick={() => onSelect(iso)} className={`px-1 py-1.5 text-center ${iso === selected ? 'shadow-[inset_0_-4px_0_#1A2B4A]' : ''} ${iso === today && !single ? 'bg-[#FFEE8C] font-semibold shadow-[inset_0_0_0_3px_#E6B800]' : ''}`}>
             <span className="block text-base">{HE_DAYS_FULL[weekdayOf(iso)]}</span>
             <span className="num block text-sm text-mute">{formatShort(iso)}</span>
           </button>
@@ -106,7 +106,7 @@ export default function TimeGrid({ days, events, milestones, selected, nextId, f
           {days.map((iso) => {
             const wk = weekdayOf(iso)
             return (
-              <div key={iso} className="relative border-s border-[#E3E6EB]" style={{ background: wk === 5 || wk === 6 ? '#F3F4F6' : undefined }}
+              <div key={iso} className="relative border-s border-[#E3E6EB]" style={{ background: iso === today && !single ? '#FFF8D0' : wk === 5 || wk === 6 ? '#F3F4F6' : undefined }}
                 onClick={single ? slotAdd(iso) : undefined}
                 onDoubleClick={single ? undefined : slotAdd(iso)}
                 title={single ? 'לחיצה על שעה: הוספת אירוע בשעה הזו' : 'לחיצה כפולה על שעה: הוספת אירוע בשעה הזו'}>

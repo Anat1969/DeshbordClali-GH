@@ -34,7 +34,7 @@ export default function Day({ uploading, step }: { uploading: boolean; step: str
             <IconButton name="chevronL" label="היום הבא" onClick={() => go(1)} />
           </div>
           <div className="flex items-center gap-2">
-            <Link to="/" className="btn gap-2 text-navy"><Icon name="calendar" size={18} />חזרה ללוח</Link>
+            <Link to="/calendar" className="btn gap-2 text-navy"><Icon name="calendar" size={18} />חזרה ללוח</Link>
             <IconButton name="plus" label="הוספת אירוע ליום הזה" tone="primary" size={20} className="!h-10 !w-10" onClick={() => app.newManual(selected)} />
           </div>
         </div>

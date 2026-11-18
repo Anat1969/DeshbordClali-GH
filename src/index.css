@@ -68,8 +68,9 @@ b, strong { font-weight: 600; }
 
 /* האירוע הבא: מרקר צהוב, ושורת התאריך שלו מהבהבת כמה פעמים */
 .marker {
-  background: linear-gradient(transparent 14%, #FFE066 14%, #FFE066 92%, transparent 92%);
-  color: inherit; padding: 0 .3em; border-radius: 3px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M1.5 13 C9 5 22 11 38 7 C58 3 78 12 97 6 C99.5 14 98 24 99 33 C80 38 60 31 40 36 C24 39 10 33 2 35 C4 27 0 20 1.5 13 Z' fill='%23FFE066'/%3E%3C/svg%3E") 0 60% / 100% 78% no-repeat;
+  color: inherit; padding: .05em .4em; margin: 0 -.15em; transform: rotate(-.8deg); display: inline-block;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone;
 }
 @keyframes blink { 50% { opacity: .2; } }
 .blink { animation: blink 1.3s ease-in-out 6; }
@@ -79,3 +80,36 @@ b, strong { font-weight: 600; }
 @keyframes rec { 50% { opacity: .15; transform: scale(.8); } }
 .rec-dot { animation: rec 0.9s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .rec-dot { animation: none; } }
+
+/* כתב יד: למידע פואטי (משפט העצמה, שיר, מילה, זיקוק) */
+.hand { font-family: "Gveret Levin", Heebo, cursive; font-weight: 400; line-height: 1.5; }
+
+/* מרקר צהוב לתוכן חשוב. בגדול ובהדגשה */
+.marker-lg {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 40' preserveAspectRatio='none'%3E%3Cpath d='M1.5 13 C9 5 22 11 38 7 C58 3 78 12 97 6 C99.5 14 98 24 99 33 C80 38 60 31 40 36 C24 39 10 33 2 35 C4 27 0 20 1.5 13 Z' fill='%23FFE066'/%3E%3C/svg%3E") 0 62% / 100% 80% no-repeat;
+  padding: .02em .45em; margin: 0 -.2em; transform: rotate(-1deg); display: inline-block;
+}
+
+/* אנימציית דף הבית: הכרטיסים עולים ברצף, הקו נשרטט, הנקודות קופצות, והשמש מסתובבת */
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.rise { opacity: 0; animation: rise .7s cubic-bezier(.2,.7,.2,1) forwards; animation-delay: var(--d, 0ms); }
+@keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 2.2s ease-out .3s forwards; }
+@keyframes pop { 0% { transform: scale(0); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.pop { transform-box: fill-box; transform-origin: center; transform: scale(0); animation: pop .5s ease-out forwards; animation-delay: var(--d, 0ms); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin-slow { transform-box: fill-box; transform-origin: center; animation: spin 28s linear infinite; }
+@keyframes drift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+.hero-drift { background: linear-gradient(120deg, #FBFAF4, #FFF6CC, #F1F4FB, #FBFAF4); background-size: 300% 300%; animation: drift 18s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .rise, .pop { animation: none; opacity: 1; transform: none; }
+  .draw { animation: none; stroke-dashoffset: 0; }
+  .spin-slow, .hero-drift { animation: none; }
+}
+
+/* כפתורים מרחפים: ריחוף עדין ורציף, ועלייה בעת מעבר עכבר */
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.btn-float { animation: bob 3.6s ease-in-out infinite; }
+.btn { transition: box-shadow .15s, background .15s, transform .15s; }
+.btn:hover { transform: translateY(-3px); }
+@media (prefers-reduced-motion: reduce) { .btn-float { animation: none; } .btn:hover { transform: none; } }

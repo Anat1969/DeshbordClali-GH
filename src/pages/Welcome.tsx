@@ -3,6 +3,10 @@ import { Link } from 'react-router-dom'
 import Icon, { type IconName } from '../components/Icon'
 import MorningBrief from '../components/MorningBrief'
 import QuickLinks from '../components/QuickLinks'
+import Sentences from '../components/Sentences'
+import MiniCalendar from '../components/MiniCalendar'
+import HomeTasks from '../components/HomeTasks'
+import { milestoneMap } from '../lib/projects'
 import { useApp } from '../lib/ctx'
 import { useTasks } from '../hooks/useTasks'
 import { buildBrief } from '../lib/brief'
@@ -32,7 +36,7 @@ const ROWS: { kinds: InspireCard['kind'][]; grid: string }[] = [
 // דף פתיחה: מה היום, מה מחר (כדי להתכונן), משימות פתוחות ומה בוצע אתמול, והשראה מהאפליקציות
 export default function Welcome() {
   const app = useApp()
-  const { tasks } = useTasks()
+  const { tasks, patch } = useTasks()
   const projects = app.projects.projects
   const [cards, setCards] = useState<InspireCard[] | null>(null)
   const [failed, setFailed] = useState(false)
@@ -45,14 +49,16 @@ export default function Welcome() {
   }, [])
 
   // תדרוך הבוקר מחושב מהאירועים, המשימות והפרויקטים
+  // ימים עם אבן דרך, לסימון בלוח הקטן
+  const marked = useMemo(() => new Set(milestoneMap(app.projects.projects).keys()), [app.projects.projects])
   const brief = useMemo(() => buildBrief({ events: app.ev.events, tasks, projects, today, name: 'ענת' }), [app.ev.events, tasks, projects, today])
   const dateLine = `${formatShort(today).split(',')[0]} · ${formatLong(today).replace(/^[^,]+, /, '')}`
 
   return (
     <div className="w-full">
       {ready ? (
-        <MorningBrief brief={brief} dateLine={dateLine}>
-          <Link to="/" className="btn btn-primary shrink-0">
+        <MorningBrief brief={brief} dateLine={dateLine} extra={<MiniCalendar events={app.ev.events} marked={marked} />}>
+          <Link to="/calendar" className="btn btn-primary btn-float shrink-0">
             כניסה ליומן
             <Icon name="chevronL" size={18} />
           </Link>
@@ -61,13 +67,15 @@ export default function Welcome() {
         <div className="mx-auto max-w-[860px] px-4 py-10"><div className="skeleton h-64" aria-busy="true" /></div>
       )}
 
+      <HomeTasks tasks={tasks} onPatch={patch} />
+
       <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <QuickLinks />
-          <Link to="/projects" className="btn gap-2 text-navy"><Icon name="chart" size={18} />מעקב פרויקטים</Link>
+          <Link to="/projects" className="btn btn-float gap-2 text-navy" style={{ animationDelay: '-1.6s' }}><Icon name="chart" size={18} />מעקב פרויקטים</Link>
         </div>
 
-        <h2 className="mb-4 mt-10 text-2xl font-light">השראה להיום <span className="text-base text-mute">מהאפליקציות שלך</span></h2>
+        <h2 className="mb-4 mt-10 text-3xl font-light">השראה להיום <span className="text-lg text-mute">מהאפליקציות שלך</span></h2>
 
         {failed && <p className="rounded-lg bg-[#FBECEA] p-3 text-bad" role="alert">ההשראה לא נטענה כרגע. אפשר להמשיך ליומן.</p>}
         {!cards && !failed && (
@@ -81,14 +89,14 @@ export default function Welcome() {
             const list = row.kinds.flatMap((k) => cards.filter((c) => c.kind === k))
             return list.length > 0 && (
               <div key={i} className={`grid items-stretch gap-4 ${row.grid}`}>
-                {list.map((c) => <Card key={c.id} card={c} big={c.kind === 'power'} />)}
+                {list.map((c, j) => <Card key={c.id} card={c} big={c.kind === 'power'} index={i * 2 + j} />)}
               </div>
             )
           })}
         </div>
 
         <div className="mt-10 text-center">
-          <Link to="/" className="btn btn-primary min-h-12 px-8 text-lg">
+          <Link to="/calendar" className="btn btn-primary btn-float min-h-12 px-8 text-lg">
             כניסה ליומן
             <Icon name="chevronL" size={20} />
           </Link>
@@ -107,18 +115,25 @@ function AppIcon({ cover, name }: { cover: string | null; name: string }) {
   )
 }
 
-function Card({ card, big }: { card: InspireCard; big?: boolean }) {
+const POETIC: InspireCard['kind'][] = ['power', 'song', 'word', 'distilled']
+
+function Card({ card, big, index = 0 }: { card: InspireCard; big?: boolean; index?: number }) {
   const k = KIND[card.kind]
+  const poetic = POETIC.includes(card.kind)
   const appName = card.app?.name ?? card.source
   const appUrl = card.app?.url ?? card.url ?? null
   return (
-    <article className={`flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-btn ${big ? 'p-6 sm:p-9' : 'p-5'}`} style={{ borderTop: `4px solid ${k.bar}` }}>
+    <article className={`rise flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-btn ${big ? 'p-6 sm:p-9' : 'p-5'}`} style={{ borderTop: `4px solid ${k.bar}`, '--d': `${index * 120}ms` } as React.CSSProperties}>
       <p className="flex items-center gap-2 text-sm font-semibold" style={{ color: k.ink }}>
         <Icon name={k.icon} size={18} />
         {card.label}
       </p>
       {card.title && <h3 className={`mt-2 break-words font-semibold text-[#111111] ${big ? 'text-xl' : 'text-lg'}`}>{card.title}</h3>}
-      <p className={`mt-2 break-words ${big ? 'text-2xl font-light leading-relaxed sm:text-4xl' : 'leading-relaxed'}`}>{card.text}</p>
+      <Sentences
+        text={card.text}
+        numbered={!poetic}
+        className={`mt-2 ${poetic ? `hand ${big ? 'text-3xl sm:text-5xl' : 'text-2xl'}` : 'text-[17px] leading-relaxed'}`}
+      />
       {card.kind === 'train' && <Quiz card={card} />}
       {card.meta && <p className="mt-2 break-words text-sm text-mute">{card.meta}</p>}
       {/* תחתית הכרטיס: האפליקציה שממנה בא, עם האייקון שלה */}

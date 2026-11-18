@@ -11,7 +11,7 @@ export default function EventDetail() {
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6">
-      <Link to="/" className="mb-6 inline-block text-navy underline underline-offset-4">חזרה אל: היומן</Link>
+      <Link to="/calendar" className="mb-6 inline-block text-navy underline underline-offset-4">חזרה אל: היומן</Link>
       {ev.loading ? (
         <div className="skeleton h-40" />
       ) : event ? (

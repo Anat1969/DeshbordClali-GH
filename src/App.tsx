@@ -9,8 +9,6 @@ import Day from './pages/Day'
 import EventDetail from './pages/EventDetail'
 import Settings from './pages/Settings'
 import Welcome from './pages/Welcome'
-import { seenToday } from './lib/inspire'
-import Login from './pages/Login'
 import { Ctx } from './lib/ctx'
 import { useAccess } from './hooks/useAccess'
 import { useEvents } from './hooks/useEvents'
@@ -20,8 +18,8 @@ import { useQuickLinks } from './hooks/useQuickLinks'
 import { useProjects } from './hooks/useProjects'
 import Work from './pages/Work'
 import Projects from './pages/Projects'
+import Tasks from './pages/Tasks'
 import Upgrades from './pages/Upgrades'
-import { demoMode } from './lib/supabase'
 
 export default function App() {
   const access = useAccess()
@@ -54,8 +52,6 @@ export default function App() {
     return () => window.removeEventListener('paste', onPaste)
   })
 
-  if (!authed) return <Login onEnter={access.enter} />
-
   const saveDraft = async (d: Parameters<typeof ev.add>[0]) => {
     await ev.add(d)
     up.reset()
@@ -77,7 +73,7 @@ export default function App() {
           newManual: (date?: string, time?: string) => up.manual(date, time),
           fromFile: up.fromFile,
           signOut: access.leave,
-          account: demoMode ? null : 'מפתח אישי',
+          account: null,
           toast,
         }}
       >
@@ -85,10 +81,12 @@ export default function App() {
           <TopBar />
           <main className="flex min-h-0 flex-1 flex-col overflow-auto">
             <Routes>
-              {/* בפעם הראשונה בכל יום נפתח דף ההשראה */}
-              <Route path="/" element={seenToday() ? <Home /> : <Navigate to="/welcome" replace />} />
+              {/* דף הבית הוא תדרוך הבוקר, והאפליקציה נפתחת עליו */}
+              <Route path="/" element={<Welcome />} />
+              <Route path="/welcome" element={<Navigate to="/" replace />} />
+              <Route path="/calendar" element={<Home uploading={up.stage === 'working'} step={up.step} />} />
               <Route path="/day" element={<Day uploading={up.stage === 'working'} step={up.step} />} />
-              <Route path="/welcome" element={<Welcome />} />
+              <Route path="/tasks" element={<Tasks />} />
               <Route path="/work" element={<Work />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/upgrades" element={<Upgrades />} />

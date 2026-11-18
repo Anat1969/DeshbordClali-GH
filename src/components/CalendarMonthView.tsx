@@ -63,7 +63,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
     const base = weekend ? WEEKEND_BG : '#FFFFFF'
     const colors = slotsHere.map((sl) => tint(sl.color))
     const layer = colors.length === 0 ? null : colors.length === 1 ? `linear-gradient(${colors[0]}, ${colors[0]})` : `linear-gradient(90deg, ${colors.map((c, i) => `${c} ${(i * 100) / colors.length}% ${((i + 1) * 100) / colors.length}%`).join(', ')})`
-    const background = layer ? `${layer}, ${base}` : isSel ? '#E8ECF4' : base
+    const background = isToday ? `linear-gradient(#FFEE8C, #FFEE8C)` : layer ? `${layer}, ${base}` : isSel ? '#E8ECF4' : base
     const big = mode === 'day' || mode === 'week'
     // בתחילת חודש ובתא הראשון מציגים את שם החודש
     const label = isGrid ? (d === 1 || idx === 0 ? `${d} ${HE_MONTHS[m].slice(0, 3)}` : String(d)) : formatShort(iso)
@@ -78,7 +78,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
     if (isSel) style.boxShadow = 'inset 0 -4px 0 #1A2B4A'
     // היום: מסגרת שחורה
     if (isToday) {
-      style.outline = '3px solid #111111'
+      style.outline = '4px solid #E6B800'
       style.outlineOffset = '-3px'
       style.position = 'relative'
       style.zIndex = 1
@@ -102,7 +102,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
         className={`group flex min-h-12 min-w-0 cursor-pointer flex-col p-1.5 transition-colors ${big ? 'rounded-lg border sm:p-2.5' : ''}`}
       >
         <div className={`flex gap-1 ${big ? 'items-start justify-between' : 'flex-col items-center sm:flex-row sm:items-start sm:justify-between'}`}>
-          <span className={`num text-sm ${big ? 'text-base sm:text-lg' : ''} ${isToday ? 'font-semibold' : iso < today && !isSel ? 'text-mute' : ''}`}>{label}</span>
+          <span className={`num text-sm ${big ? 'text-base sm:text-lg' : ''} ${isToday ? 'text-base font-semibold sm:text-lg' : iso < today && !isSel ? 'text-mute' : ''}`}>{label}</span>
           <span className="flex items-center gap-0.5">
             {marks.length > 0 && <Icon name="diamond" size={iconSize} style={{ color: '#1A2B4A' }} />}
             {slotsHere.map((sl) => (
@@ -123,7 +123,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
             )}
           </span>
         </div>
-        {isToday && big && <span className="mt-0.5 text-xs font-semibold">היום</span>}
+        {isToday && big && <span className="marker mt-0.5 self-start text-sm font-semibold">היום</span>}
 
         {mode !== 'quarter' && (
           <div className={`mt-1 flex-col gap-1 ${big ? 'flex' : 'hidden sm:flex'}`}>
@@ -165,31 +165,29 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
 
   return (
     <section className="flex min-h-0 flex-1 flex-col" aria-label={`לוח שנה, ${VIEW_LABEL[mode]}`}>
-      {/* בורר תצוגה: חמישה כפתורים באותו גודל */}
-      <div className="mb-3 grid grid-cols-5 gap-1.5 sm:gap-2" role="group" aria-label="תצוגה">
-        {MODES.map((m) => (
-          <button
-            key={m}
-            type="button"
-            aria-pressed={mode === m}
-            onClick={() => onMode(m)}
-            className={`btn !px-0.5 text-[13px] whitespace-nowrap sm:!px-3 sm:text-base ${mode === m ? 'btn-primary' : ''}`}
-          >
-            {VIEW_LABEL[m]}
-          </button>
-        ))}
-      </div>
-
-      {/* הקודם והבא במקום קבוע, באותו רוחב */}
-      <div className="mb-3 grid grid-cols-[72px_minmax(0,1fr)_72px] items-center gap-2 sm:grid-cols-[88px_minmax(0,1fr)_88px]">
-        <button type="button" className="btn" aria-label="הקודם" title="הקודם" onClick={onPrev}><Icon name="chevronR" size={24} /></button>
-        <div className="flex flex-col items-center">
-          <h2 className="text-center text-sm font-light leading-tight sm:whitespace-nowrap sm:text-2xl">
+      {/* שורה אחת: הקודם, הטווח, הבא, חזרה להיום, ובצד השני בורר התצוגה */}
+      <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex items-center gap-1.5">
+          <button type="button" className="btn !min-h-9 !px-2.5" aria-label="הקודם" title="הקודם" onClick={onPrev}><Icon name="chevronR" size={20} /></button>
+          <h2 className="m-0 min-w-[9.5rem] text-center text-lg font-light leading-tight sm:text-xl">
             <span className="num">{formatRange(days[0], days[days.length - 1])}</span>
           </h2>
-          <button type="button" className="inline-flex items-center gap-1 text-sm text-navy underline underline-offset-4" onClick={onToday}><Icon name="target" size={14} />חזרה להיום</button>
+          <button type="button" className="btn !min-h-9 !px-2.5" aria-label="הבא" title="הבא" onClick={onNext}><Icon name="chevronL" size={20} /></button>
+          <button type="button" className="inline-flex items-center gap-1 px-1 text-sm text-navy underline underline-offset-4" onClick={onToday}><Icon name="target" size={14} />היום</button>
         </div>
-        <button type="button" className="btn" aria-label="הבא" title="הבא" onClick={onNext}><Icon name="chevronL" size={24} /></button>
+        <div className="ms-auto grid grid-cols-5 gap-1" role="group" aria-label="תצוגה">
+          {MODES.map((m) => (
+            <button
+              key={m}
+              type="button"
+              aria-pressed={mode === m}
+              onClick={() => onMode(m)}
+              className={`btn !min-h-9 !px-2 text-[13px] whitespace-nowrap sm:!px-3 sm:text-sm ${mode === m ? 'btn-primary' : ''}`}
+            >
+              {VIEW_LABEL[m]}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div role="grid" className="flex min-h-0 flex-1 flex-col">
@@ -197,7 +195,7 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
         {mode !== 'day' && (
           <div role="row" className={`grid-cols-7 pb-1.5 text-center ${mode === 'week' ? 'hidden' : 'grid'}`}>
             {heads.map((dow, i) => (
-              <div key={i} role="columnheader" className={`text-lg font-semibold sm:text-xl ${dow === todayDow ? 'text-ink' : dow === 5 || dow === 6 ? 'text-mute' : 'text-ink'}`}>
+              <div key={i} role="columnheader" className={`text-base font-semibold ${dow === todayDow ? 'text-ink' : dow === 5 || dow === 6 ? 'text-mute' : 'text-ink'}`}>
                 <span className="sm:hidden">{HE_DAYS_SHORT[dow]}</span>
                 <span className="hidden sm:inline">{HE_DAYS_FULL[dow]}</span>
                 {dow === todayDow && <span className="block h-1 rounded bg-[#111111]" aria-hidden="true" />}

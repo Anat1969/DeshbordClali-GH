@@ -9,15 +9,7 @@ export default function CategoryLegend() {
   const [edit, setEdit] = useState(false)
 
   return (
-    <section className="mt-3" aria-label="מקרא קטגוריות">
-      <div className="mb-2 flex items-center justify-end gap-3">
-        <div className="flex shrink-0 items-center gap-3">
-          {edit && cats.save === 'saving' && <span className="text-sm text-mute">שומר...</span>}
-          {edit && cats.save === 'saved' && <span className="text-sm text-good">נשמר</span>}
-          {edit && cats.save === 'error' && <span className="text-sm text-bad">השמירה נכשלה</span>}
-          <IconButton name={edit ? 'check' : 'pencil'} label={edit ? 'סיום עריכת קטגוריות' : 'עריכת קטגוריות'} size={16} className="!h-8 !w-8" onClick={() => setEdit((e) => !e)} />
-        </div>
-      </div>
+    <section className="mt-2 flex items-center justify-between gap-3" aria-label="מקרא קטגוריות">
       <ul className="m-0 flex list-none flex-wrap gap-x-5 gap-y-2 p-0">
         {SLOTS.map((s) => (
           <li key={s.key} className="flex items-center gap-2">
@@ -40,6 +32,14 @@ export default function CategoryLegend() {
           </li>
         ))}
       </ul>
+      <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-3">
+          {edit && cats.save === 'saving' && <span className="text-sm text-mute">שומר...</span>}
+          {edit && cats.save === 'saved' && <span className="text-sm text-good">נשמר</span>}
+          {edit && cats.save === 'error' && <span className="text-sm text-bad">השמירה נכשלה</span>}
+          <IconButton name={edit ? 'check' : 'pencil'} label={edit ? 'סיום עריכת קטגוריות' : 'עריכת קטגוריות'} size={16} className="!h-8 !w-8" onClick={() => setEdit((e) => !e)} />
+        </div>
+      </div>
     </section>
   )
 }

@@ -157,10 +157,13 @@ function Shot({ shot, onClose }: { shot: { url: string; busy: boolean; drafts: E
   const addAll = async () => {
     setFailed(false)
     let n = 0
-    for (let i = 0; i < items.length; i++) if (!added.has(i) && ready(items[i]) && (await addOne(i))) n++
+    for (let i = 0; i < items.length; i++) if (!added.has(i) && ready(items[i]) && !inCal(items[i]) && (await addOne(i))) n++
     if (n) app.toast(n === 1 ? 'אירוע אחד נוסף ליומן' : `${n} אירועים נוספו ליומן`)
   }
-  const pending = items.filter((d, i) => !added.has(i) && ready(d)).length
+  // אירוע שכבר ביומן: אותו תאריך, אותה שעה ותחילת שם זהה
+  const norm = (t: string) => t.replace(/\s+/g, ' ').trim().slice(0, 12)
+  const inCal = (d: EventDraft) => app.ev.events.some((e) => e.event_date === d.event_date && (e.event_time ?? '').slice(0, 5) === (d.event_time ?? '') && norm(e.title) === norm(d.title))
+  const pending = items.filter((d, i) => !added.has(i) && ready(d) && !inCal(d)).length
 
   return (
     <section className="mt-6" aria-label="אירועים מהתמונה">
@@ -175,7 +178,7 @@ function Shot({ shot, onClose }: { shot: { url: string; busy: boolean; drafts: E
         {shot.busy && <div className="skeleton mt-4 h-24" aria-busy="true" />}
         <ul className="m-0 mt-4 grid list-none gap-3 p-0">
           {items.map((d, i) => (
-            <li key={i} className={`rounded-lg bg-soft/70 p-3 ${added.has(i) ? 'opacity-60' : ''}`}>
+            <li key={i} className={`rounded-lg bg-soft/70 p-3 ${added.has(i) || inCal(d) ? 'opacity-60' : ''}`}>
               <input className="field font-semibold" value={d.title} aria-label="נושא" disabled={added.has(i)} onChange={(e) => patch(i, { title: e.target.value })} />
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <input type="date" className={`field num ${d.event_date ? '' : 'invalid'}`} value={d.event_date ?? ''} aria-label="תאריך" disabled={added.has(i)} onChange={(e) => patch(i, { event_date: e.target.value || null })} />
@@ -183,9 +186,9 @@ function Shot({ shot, onClose }: { shot: { url: string; busy: boolean; drafts: E
               </div>
               {!d.event_date && <p className="mt-1 text-sm text-bad">לא זיהיתי תאריך. בחרי תאריך כדי להוסיף.</p>}
               {d.location && <p className="mt-2 text-sm text-mute">{d.location}</p>}
-              <button type="button" className="btn mt-2" disabled={added.has(i) || !ready(d)} onClick={() => addOne(i).then((ok) => ok && app.toast('נוסף ליומן'))}>
-                <Icon name={added.has(i) ? 'check' : 'plus'} size={16} />
-                {added.has(i) ? 'נוסף' : 'הוספה ליומן'}
+              <button type="button" className="btn mt-2" disabled={added.has(i) || inCal(d) || !ready(d)} onClick={() => addOne(i).then((ok) => ok && app.toast('נוסף ליומן'))}>
+                <Icon name={added.has(i) || inCal(d) ? 'check' : 'plus'} size={16} />
+                {added.has(i) ? 'נוסף' : inCal(d) ? 'כבר ביומן' : 'הוספה ליומן'}
               </button>
             </li>
           ))}
