@@ -1,63 +1,108 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import Icon, { IconButton } from '../components/Icon'
-import VoiceButton from '../components/VoiceButton'
 import { useSpeech } from '../hooks/useSpeech'
 import { useApp } from '../lib/ctx'
 import { SLOTS } from '../lib/categories'
 import { createTask } from '../lib/tasks'
-import { getContacts, gmailUrl, interpret, saveContacts, whatsappUrl, type Contact, type WorkAction } from '../lib/work'
+import { getContacts, gmailUrl, interpret, saveContacts, whatsappUrl, type Contact, type Turn, type WorkAction } from '../lib/work'
 import { extractMany } from '../lib/claude'
+import { GUIDE } from '../lib/guide'
 import { emptyDraft, type EventDraft } from '../types'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-// מסך עבודה: כותבים (או אומרים) מה לעשות, והמערכת מכינה את הפעולה לאישור: מייל ב-Gmail, אירוע, משימה, ווצאפ
+// הודעה בשיחה: של ענת, או של הבוט (טקסט, שאלה עם תשובות מוצעות, פעולות לאישור, או אירועים שנקראו מתמונה)
+type ShotState = { url: string; busy: boolean; drafts: EventDraft[] }
+type Msg =
+  | { id: number; role: 'me'; text: string; image?: string }
+  | { id: number; role: 'bot'; text: string; actions?: WorkAction[]; options?: string[]; shot?: ShotState; error?: boolean; hello?: boolean }
+
+const HELLO: Msg = { id: 0, role: 'bot', hello: true, text: 'שלום ענת.\nכתבי או אמרי מה לעשות, ואני מכין את הפעולה.\nשום דבר לא יוצא בלי אישור שלך.' }
+// השיחה נשמרת בזמן מעבר בין מסכים, עד רענון הדף או "שיחה חדשה"
+let kept: Msg[] = [HELLO]
+let seq = 1
+const EXAMPLES = GUIDE['/work'].items.filter((i) => i.ask).slice(0, 5)
+
+const isAsk = (m: Msg | undefined) => !!m && m.role === 'bot' && !m.error && (m.actions ?? []).some((a) => a.type === 'none')
+// מה נשלח לשרת כהקשר: הטקסט של כל תור, וסיכום קצר של מה שהבוט הכין
+const toTurn = (m: Msg): Turn => {
+  if (m.role === 'me') return { role: 'me', text: m.text || '(תמונה)' }
+  const made = (m.actions ?? []).filter((a) => a.type !== 'none').map((a) => (a.type === 'email' ? `מייל ל${a.to_name}` : a.type === 'whatsapp' ? `ווצאפ ל${a.to_name}` : a.type === 'event' ? `אירוע: ${a.title} ב-${a.event_date}` : a.type === 'task' ? `משימה: ${a.text}` : a.type === 'contact' ? `איש קשר: ${a.name}` : ''))
+  return { role: 'bot', text: [m.text, made.length ? `[הכנתי: ${made.join('; ')}]` : ''].filter(Boolean).join(' ') }
+}
+
+// שיחה: דיאלוג עם הבוט. ההודעות למעלה, ותיבת הכתיבה קבועה בתחתית, תמיד באותו מקום
 export default function Work() {
   const app = useApp()
+  const loc = useLocation()
+  const [msgs, setMsgsState] = useState<Msg[]>(kept)
+  const setMsgs = (fn: (l: Msg[]) => Msg[]) => setMsgsState((l) => (kept = fn(l)))
   const [cmd, setCmd] = useState('')
   const speech = useSpeech((t) => setCmd((v) => (v + ' ' + t).trim()))
   const [busy, setBusy] = useState(false)
-  const [res, setRes] = useState<{ reply: string; actions: WorkAction[] } | null>(null)
-  const [err, setErr] = useState<string | null>(null)
   const [contacts, setContacts] = useState<Contact[]>([])
-  const [shot, setShot] = useState<{ url: string; busy: boolean; drafts: EventDraft[] } | null>(null)
   const picker = useRef<HTMLInputElement>(null)
+  const box = useRef<HTMLTextAreaElement>(null)
+  const end = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     getContacts().then(setContacts).catch(() => { /* אין אנשי קשר עדיין */ })
   }, [])
 
-  const run = async () => {
-    const c = cmd.trim()
+  // בקשה מוכנה שהגיעה ממסך אחר (מ"מה אפשר כאן" או מאנשי הקשר) נכנסת לתיבה, לעריכה לפני שליחה
+  useEffect(() => {
+    const ask = (loc.state as { ask?: string } | null)?.ask
+    if (ask !== undefined) { setCmd(ask); box.current?.focus() }
+  }, [loc.key, loc.state])
+
+  useEffect(() => { end.current?.scrollIntoView({ block: 'end' }) }, [msgs, busy])
+  // התיבה גדלה עם הטקסט, עד חמש שורות
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 150)}px`
+  }, [cmd])
+
+  const last = msgs[msgs.length - 1]
+  const asking = !busy && isAsk(last)
+
+  const send = async (text: string) => {
+    const c = text.trim()
     if (!c || busy) return
     speech.stop()
+    const history = msgs.filter((m) => !('hello' in m && m.hello) && !(m.role === 'bot' && (m.error || m.shot))).slice(-8).map(toTurn)
+    setMsgs((l) => [...l, { id: seq++, role: 'me', text: c }])
+    setCmd('')
     setBusy(true)
-    setErr(null)
-    setRes(null)
     try {
-      setRes(await interpret(c, SLOTS.map((s) => app.cats.names[s.key].trim()).filter(Boolean)))
+      const r = await interpret(c, SLOTS.map((s) => app.cats.names[s.key].trim()).filter(Boolean), history)
+      const q = r.actions.filter((a) => a.type === 'none').map((a) => (a.type === 'none' ? a.message : ''))
+      // שאלה של הבוט היא הטקסט של הבועה. אם יש גם פעולות, המשפט הפותח נשאר מעליה
+      const text = [r.actions.length > q.length || !q.length ? r.reply : '', ...q].filter(Boolean).join('\n')
+      setMsgs((l) => [...l, { id: seq++, role: 'bot', text, actions: r.actions, options: q.length ? r.options : [] }])
     } catch (e) {
       const msg = e instanceof Error ? e.message : ''
-      setErr(msg === 'no_anthropic_key' ? 'חסר מפתח Claude בשרת.' : msg && !/^[a-z_]+$/.test(msg) ? msg : 'לא הצלחתי להבין את הבקשה. אפשר לנסח שוב.')
+      setMsgs((l) => [...l, { id: seq++, role: 'bot', error: true, text: msg === 'no_anthropic_key' ? 'חסר מפתח Claude בשרת.' : msg && !/^[a-z_]+$/.test(msg) ? msg : 'לא הצלחתי להבין את הבקשה.\nאפשר לנסח שוב, כאן למטה.' }])
     } finally {
       setBusy(false)
+      box.current?.focus()
     }
   }
 
   // תמונה שהודבקה, נגררה או נבחרה: קוראים ממנה את כל האירועים ומציגים לאישור
   const readShot = async (file: File) => {
     if (!file.type.startsWith('image/')) return app.toast('צריך תמונה: PNG, JPG או WEBP')
-    if (shot?.url) URL.revokeObjectURL(shot.url)
-    setErr(null)
-    setRes(null)
-    setShot({ url: URL.createObjectURL(file), busy: true, drafts: [] })
+    const url = URL.createObjectURL(file)
+    const id = seq++
+    setMsgs((l) => [...l, { id: seq++, role: 'me', text: '', image: url }, { id, role: 'bot', text: '', shot: { url, busy: true, drafts: [] } }])
+    const set = (p: Partial<Msg>) => setMsgs((l) => l.map((m) => (m.id === id ? ({ ...m, ...p } as Msg) : m)))
     try {
       const drafts = await extractMany(file, app.cats.names)
-      setShot((s) => s && { ...s, busy: false, drafts })
-      if (!drafts.length) setErr('לא מצאתי אירועים בתמונה. אפשר לנסות תמונה חדה יותר.')
+      set(drafts.length ? { shot: { url, busy: false, drafts } } : { shot: undefined, error: true, text: 'לא מצאתי אירועים בתמונה.\nאפשר לנסות תמונה חדה יותר.' })
     } catch (e) {
-      setShot((s) => s && { ...s, busy: false })
-      setErr(e instanceof Error ? e.message : 'קריאת התמונה נכשלה')
+      set({ shot: undefined, error: true, text: e instanceof Error ? e.message : 'קריאת התמונה נכשלה' })
     }
   }
   const imageOf = (files?: FileList | null) => Array.from(files ?? []).find((f) => f.type.startsWith('image/'))
@@ -73,69 +118,133 @@ export default function Work() {
     persist(i < 0 ? [...contacts, c] : contacts.map((x, k) => (k === i ? { ...x, ...Object.fromEntries(Object.entries(c).filter(([, v]) => v)) } : x)))
   }
 
+  const fresh = () => { kept = [HELLO]; setMsgsState(kept); setCmd(''); box.current?.focus() }
+
   return (
     <div
-      className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 sm:py-8"
+      className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-3 sm:px-6"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         const f = imageOf(e.dataTransfer.files)
         if (f) { e.preventDefault(); readShot(f) }
       }}
     >
-      <h1 className="flex items-center gap-3 text-3xl font-light"><Icon name="spark" size={28} />מסך <b>עבודה</b></h1>
-      <p className="mb-5 mt-1 text-mute">כתבי או אמרי מה לעשות. אני מכין את הפעולה, ואת מאשרת לפני שהיא יוצאת.</p>
-
-      <textarea
-        className="field resize-none text-lg"
-        rows={3}
-        value={cmd}
-        placeholder="מה לעשות? אפשר גם להדביק כאן תמונה, למשל צילום מסך של היומן"
-        aria-label="מה לעשות"
-        onChange={(e) => setCmd(e.target.value)}
-        onPaste={(e) => {
-          const f = imageOf(e.clipboardData.files)
-          if (f) { e.preventDefault(); readShot(f) }
-        }}
-        onKeyDown={(e) => (e.ctrlKey || e.metaKey) && e.key === 'Enter' && run()}
-      />
-      <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          <VoiceButton speech={speech} label="הקלטת בקשה" />
-          <button type="button" className="btn" onClick={() => picker.current?.click()}>
-            <Icon name="upload" size={16} />
-            תמונה
-          </button>
-          <input ref={picker} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) readShot(f); e.target.value = '' }} />
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 py-3">
+        <h1 className="m-0 flex items-center gap-2.5 text-2xl font-light"><Icon name="spark" size={24} />שיחה <b>עם הבוט</b></h1>
+        <div className="flex gap-2">
+          <Link to="/contacts" className="btn !min-h-9 gap-1.5 text-sm"><Icon name="users" size={16} />אנשי קשר <span className="num text-mute">{contacts.length || ''}</span></Link>
+          {msgs.length > 1 && <button type="button" className="btn !min-h-9 gap-1.5 text-sm" onClick={fresh}><Icon name="plus" size={16} />שיחה חדשה</button>}
         </div>
-        <button type="button" className="btn btn-primary min-h-12 min-w-36" disabled={!cmd.trim() || busy} onClick={run}>
-          <Icon name="send" size={18} />
-          {busy ? 'מכין...' : 'ביצוע'}
-        </button>
       </div>
 
-      {shot && <Shot shot={shot} onClose={() => { URL.revokeObjectURL(shot.url); setShot(null) }} />}
+      {/* ההודעות: הבוט מימין עם סמל, ענת משמאל בכחול */}
+      <div className="min-h-0 flex-1 overflow-y-auto rounded-lg bg-[#F7F8FA] px-3 py-4 sm:px-5" role="log" aria-live="polite" aria-label="השיחה">
+        <ol className="m-0 grid list-none gap-4 p-0">
+          {msgs.map((m, i) => m.role === 'me' ? (
+            <li key={m.id} className="flex justify-end">
+              <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-navy px-4 py-2.5 text-lg text-white shadow-btn">
+                {m.image && <img src={m.image} alt="התמונה שנשלחה" className="max-h-40 rounded-lg" />}
+                {m.text && <p className="m-0 whitespace-pre-wrap break-words">{m.text}</p>}
+              </div>
+            </li>
+          ) : (
+            <li key={m.id} className="flex items-start gap-2.5">
+              <BotFace />
+              <div className="min-w-0 max-w-[88%] flex-1 sm:flex-none sm:basis-auto">
+                {m.text && (
+                  <div className={`inline-block max-w-full rounded-2xl rounded-tr-sm px-4 py-2.5 text-lg shadow-btn ${m.error ? 'bg-[#FBECEA] text-bad' : 'bg-white'}`}>
+                    {isAsk(m) && <p className="m-0 mb-1 text-sm font-semibold text-[#B85F0B]">שאלה אליך</p>}
+                    <p className="m-0 whitespace-pre-wrap break-words">{m.text}</p>
+                  </div>
+                )}
+                {m.hello && (
+                  <div className="mt-2.5">
+                    <p className="m-0 mb-1.5 text-sm text-mute">דוגמאות. לחיצה מעתיקה לתיבה שלמטה, ואפשר לשנות לפני השליחה:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {EXAMPLES.map((x) => (
+                        <button key={x.t} type="button" className="btn !h-auto !min-h-9 !justify-start !py-1.5 text-right text-[15px]" title={x.ask} onClick={() => { setCmd(x.ask!); box.current?.focus() }}>{x.t}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {m.shot && <Shot shot={m.shot} />}
+                {(m.actions ?? []).some((a) => a.type !== 'none') && (
+                  <div className="mt-2.5 grid w-full gap-3 sm:w-[560px] sm:max-w-full">
+                    {m.actions!.filter((a) => a.type !== 'none').map((a, k) => <Action key={k} a={a} contacts={contacts} remember={remember} />)}
+                  </div>
+                )}
+                {/* תשובות מוצעות לשאלה האחרונה: לחיצה שולחת */}
+                {i === msgs.length - 1 && asking && (m.options ?? []).length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap gap-2" role="group" aria-label="תשובות מוצעות">
+                    {m.options!.map((o) => <button key={o} type="button" className="btn btn-primary !min-h-10" onClick={() => send(o)}>{o}</button>)}
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+          {busy && (
+            <li className="flex items-start gap-2.5" aria-label="הבוט כותב">
+              <BotFace />
+              <div className="flex items-center gap-1.5 rounded-2xl rounded-tr-sm bg-white px-4 py-4 shadow-btn">
+                {[0, 1, 2].map((d) => <span key={d} className="typing-dot h-2 w-2 rounded-full bg-mute" style={{ animationDelay: `${d * 160}ms` }} />)}
+              </div>
+            </li>
+          )}
+        </ol>
+        <div ref={end} />
+      </div>
 
-      {err && <p className="mt-5 rounded-lg bg-[#FBECEA] p-3 text-bad" role="alert">{err}</p>}
-      {busy && <div className="skeleton mt-5 h-32" aria-busy="true" />}
-
-      {res && (
-        <section className="mt-6" aria-label="תוצאה">
-          {res.reply && <p className="mb-3 text-lg font-semibold text-[#111111]">{res.reply}</p>}
-          <div className="grid gap-4">
-            {res.actions.map((a, i) => (
-              <Action key={i} a={a} contacts={contacts} remember={remember} />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <Contacts contacts={contacts} onChange={persist} />
+      {/* תיבת הכתיבה: קבועה בתחתית. כשהבוט שואל, היא מסומנת ואומרת שכאן עונים */}
+      <div className="shrink-0 pb-3 pt-2.5">
+        {asking && (
+          <p className="m-0 mb-1.5 flex items-center gap-1.5 font-semibold text-[#B85F0B]" role="status">
+            <Icon name="chevronD" size={16} />
+            הבוט מחכה לתשובה שלך. כותבים אותה כאן:
+          </p>
+        )}
+        <div className={`flex items-end gap-2 rounded-xl bg-white p-2 transition-shadow ${asking ? 'shadow-[0_0_0_3px_#F0B26B,0_2px_8px_rgba(26,43,74,.08)]' : 'shadow-[0_0_0_2px_#1A2B4A,0_2px_8px_rgba(26,43,74,.08)]'}`}>
+          <textarea
+            ref={box}
+            rows={1}
+            autoFocus
+            className="min-h-11 flex-1 resize-none border-0 bg-transparent px-2 py-2 text-lg text-ink outline-none placeholder:text-mute"
+            value={cmd}
+            placeholder={asking ? 'התשובה שלך...' : msgs.length > 1 ? 'מה עוד לעשות?' : 'מה לעשות?'}
+            aria-label={asking ? 'התשובה שלך לבוט' : 'הודעה לבוט'}
+            onChange={(e) => setCmd(e.target.value)}
+            onPaste={(e) => {
+              const f = imageOf(e.clipboardData.files)
+              if (f) { e.preventDefault(); readShot(f) }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(cmd) }
+            }}
+          />
+          {speech.supported && (
+            <IconButton name={speech.listening ? 'stop' : 'mic'} label={speech.listening ? 'עצירת הקלטה' : 'הקלטה ותמלול'} tone={speech.listening ? 'danger' : 'plain'} size={20} className={`!h-11 !w-11 ${speech.listening ? 'bg-[#FBECEA]' : 'bg-soft'}`} onClick={speech.toggle} />
+          )}
+          <IconButton name="upload" label="צירוף תמונה, למשל צילום מסך של יומן" size={20} className="!h-11 !w-11 bg-soft" onClick={() => picker.current?.click()} />
+          <input ref={picker} type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) readShot(f); e.target.value = '' }} />
+          <button type="button" className="btn btn-primary !min-h-11 shrink-0 !px-4" disabled={!cmd.trim() || busy} onClick={() => send(cmd)}>
+            <Icon name="send" size={18} />
+            <span className="hidden sm:inline">{busy ? 'מכין...' : 'שליחה'}</span>
+          </button>
+        </div>
+        <p className="m-0 mt-1.5 text-sm text-mute">
+          {speech.listening ? <span className="text-bad">מקליטה, דברי עכשיו. {speech.interim}</span> : speech.error ? <span className="text-bad">{speech.error}</span> : <>Enter שולח. Shift+Enter יורד שורה. אפשר להדביק או לגרור לכאן תמונה.</>}
+        </p>
+      </div>
     </div>
   )
 }
 
+// הסמל של הבוט: ריבוע כחול עם ניצוץ, ליד כל הודעה שלו
+function BotFace() {
+  return <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy text-white" aria-label="הבוט"><Icon name="spark" size={18} /></span>
+}
+
 // תוצאת קריאת תמונה: כל אירוע בכרטיס משלו, עם הוספה בודדת או הוספת הכול ליומן
-function Shot({ shot, onClose }: { shot: { url: string; busy: boolean; drafts: EventDraft[] }; onClose: () => void }) {
+function Shot({ shot }: { shot: ShotState }) {
   const app = useApp()
   const [items, setItems] = useState<EventDraft[]>([])
   const [added, setAdded] = useState<Set<number>>(new Set())
@@ -166,14 +275,13 @@ function Shot({ shot, onClose }: { shot: { url: string; busy: boolean; drafts: E
   const pending = items.filter((d, i) => !added.has(i) && ready(d) && !inCal(d)).length
 
   return (
-    <section className="mt-6" aria-label="אירועים מהתמונה">
+    <section className="w-full sm:w-[560px] sm:max-w-full" aria-label="אירועים מהתמונה">
       <Frame icon="calendar" title="אירועים שנקראו מהתמונה">
         <div className="flex items-start gap-3">
           <img src={shot.url} alt="התמונה שהודבקה" className="h-20 w-28 shrink-0 rounded-lg bg-soft object-cover" />
           <p className="min-w-0 flex-1 text-lg font-semibold">
             {shot.busy ? 'קורא את התמונה...' : items.length ? `נמצאו ${items.length} אירועים. בדקי ואשרי לפני ההוספה.` : 'לא נמצאו אירועים'}
           </p>
-          <IconButton name="x" label="סגירת התמונה" size={16} className="!h-8 !w-8" onClick={onClose} />
         </div>
         {shot.busy && <div className="skeleton mt-4 h-24" aria-busy="true" />}
         <ul className="m-0 mt-4 grid list-none gap-3 p-0">
@@ -220,12 +328,14 @@ function Action({ a, contacts, remember }: { a: WorkAction; contacts: Contact[];
     case 'event': return <EventAction a={a} />
     case 'task': return <TaskAction a={a} />
     case 'whatsapp': return <WhatsappCard a={a} remember={remember} />
-    default: return <Frame icon="note" title="צריך עוד פרט"><p className="text-lg">{a.message}</p></Frame>
+    case 'contact': return <ContactAction a={a} contacts={contacts} remember={remember} />
+    default: return null
   }
 }
 
 function EmailCard({ a, contacts, remember }: { a: Extract<WorkAction, { type: 'email' }>; contacts: Contact[]; remember: (c: Contact) => void }) {
   const app = useApp()
+  const id = useId()
   // כתובת שמורה באנשי הקשר מתמלאת לבד
   const known = contacts.find((c) => c.name && a.to_name && (c.name.includes(a.to_name) || a.to_name.includes(c.name)))?.email ?? ''
   const [to, setTo] = useState(a.to_email || known)
@@ -239,13 +349,13 @@ function EmailCard({ a, contacts, remember }: { a: Extract<WorkAction, { type: '
   }
   return (
     <Frame icon="mail" title={`מייל ל${a.to_name || 'נמען'}`}>
-      <label className="label" htmlFor="m-to">כתובת</label>
-      <input id="m-to" dir="ltr" className={`field num text-right ${ok ? '' : 'invalid'}`} value={to} placeholder="name@gmail.com" onChange={(e) => setTo(e.target.value)} />
+      <label className="label" htmlFor={`${id}-to`}>כתובת</label>
+      <input id={`${id}-to`} dir="ltr" className={`field num text-right ${ok ? '' : 'invalid'}`} value={to} placeholder="name@gmail.com" onChange={(e) => setTo(e.target.value)} />
       {!ok && <p className="mt-1 text-sm text-bad">חסרה כתובת של {a.to_name || 'הנמען'}. מזינים פעם אחת, והיא נשמרת באנשי הקשר.</p>}
-      <label className="label mt-3" htmlFor="m-su">נושא</label>
-      <input id="m-su" className="field" value={subject} onChange={(e) => setSubject(e.target.value)} />
-      <label className="label mt-3" htmlFor="m-bo">תוכן</label>
-      <textarea id="m-bo" rows={6} className="field resize-y" value={body} onChange={(e) => setBody(e.target.value)} />
+      <label className="label mt-3" htmlFor={`${id}-su`}>נושא</label>
+      <input id={`${id}-su`} className="field" value={subject} onChange={(e) => setSubject(e.target.value)} />
+      <label className="label mt-3" htmlFor={`${id}-bo`}>תוכן</label>
+      <textarea id={`${id}-bo`} rows={6} className="field resize-y" value={body} onChange={(e) => setBody(e.target.value)} />
       <div className="mt-4 flex flex-wrap gap-3">
         <button type="button" className="btn btn-primary" disabled={!ok} onClick={open}>
           <Icon name="mail" size={16} />
@@ -311,16 +421,17 @@ function TaskAction({ a }: { a: Extract<WorkAction, { type: 'task' }> }) {
 }
 
 function WhatsappCard({ a, remember }: { a: Extract<WorkAction, { type: 'whatsapp' }>; remember: (c: Contact) => void }) {
+  const id = useId()
   const [phone, setPhone] = useState(a.to_phone)
   const [text, setText] = useState(a.text)
   const link = whatsappUrl(phone, text)
   return (
     <Frame icon="send" title={`הודעת ווצאפ ל${a.to_name || 'נמען'}`}>
-      <label className="label" htmlFor="w-ph">טלפון</label>
-      <input id="w-ph" dir="ltr" inputMode="tel" className={`field num text-right ${link ? '' : 'invalid'}`} value={phone} placeholder="050-0000000" onChange={(e) => setPhone(e.target.value)} />
+      <label className="label" htmlFor={`${id}-ph`}>טלפון</label>
+      <input id={`${id}-ph`} dir="ltr" inputMode="tel" className={`field num text-right ${link ? '' : 'invalid'}`} value={phone} placeholder="050-0000000" onChange={(e) => setPhone(e.target.value)} />
       {!link && <p className="mt-1 text-sm text-bad">חסר מספר תקין של {a.to_name || 'הנמען'}. מזינים פעם אחת, והוא נשמר.</p>}
-      <label className="label mt-3" htmlFor="w-tx">ההודעה</label>
-      <textarea id="w-tx" rows={3} className="field resize-y" value={text} onChange={(e) => setText(e.target.value)} />
+      <label className="label mt-3" htmlFor={`${id}-tx`}>ההודעה</label>
+      <textarea id={`${id}-tx`} rows={3} className="field resize-y" value={text} onChange={(e) => setText(e.target.value)} />
       <button
         type="button"
         className="btn btn-primary mt-4"
@@ -338,33 +449,24 @@ function WhatsappCard({ a, remember }: { a: Extract<WorkAction, { type: 'whatsap
   )
 }
 
-// אנשי קשר שמורים: משמשים להשלמת כתובות ומספרים אוטומטית
-function Contacts({ contacts, onChange }: { contacts: Contact[]; onChange: (c: Contact[]) => void }) {
-  const [c, setC] = useState<Contact>({ name: '', email: '', phone: '' })
-  const add = () => {
-    if (!c.name.trim()) return
-    onChange([...contacts.filter((x) => x.name !== c.name.trim()), { ...c, name: c.name.trim() }])
-    setC({ name: '', email: '', phone: '' })
-  }
+// איש קשר שהבוט הציע לשמור: שם, מייל וטלפון לעריכה, ושמירה בלחיצה
+function ContactAction({ a, contacts, remember }: { a: Extract<WorkAction, { type: 'contact' }>; contacts: Contact[]; remember: (c: Contact) => void }) {
+  const app = useApp()
+  const [c, setC] = useState<Contact>({ name: a.name, email: a.email, phone: a.phone })
+  const [done, setDone] = useState(false)
+  const exists = contacts.some((x) => x.name === c.name.trim())
+  const ok = !!c.name.trim() && (!c.email.trim() || EMAIL.test(c.email.trim()))
   return (
-    <section className="mt-10" aria-label="אנשי קשר שמורים">
-      <h2 className="mb-1 flex items-center gap-2 text-xl font-light"><Icon name="users" size={20} />אנשי קשר שמורים</h2>
-      <p className="mb-3 text-sm text-mute">כתובת או טלפון שמורים מתמלאים לבד בפעם הבאה.</p>
-      <ul className="m-0 grid list-none gap-1.5 p-0">
-        {contacts.map((x) => (
-          <li key={x.name} className="flex items-center gap-3 rounded-lg bg-soft/70 px-3 py-2">
-            <span className="min-w-0 flex-1 break-words"><b>{x.name}</b> <span className="num text-sm text-mute">{[x.email, x.phone].filter(Boolean).join(' · ')}</span></span>
-            <IconButton name="x" label={`מחיקת ${x.name}`} tone="danger" size={16} className="!h-8 !w-8" onClick={() => onChange(contacts.filter((y) => y.name !== x.name))} />
-          </li>
-        ))}
-        {contacts.length === 0 && <li className="text-sm text-mute">עוד אין אנשי קשר. הם יישמרו לבד כשתפתחי מייל או ווצאפ.</li>}
-      </ul>
-      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1.4fr_1fr_auto]">
-        <input className="field" placeholder="שם" aria-label="שם" value={c.name} onChange={(e) => setC({ ...c, name: e.target.value })} />
-        <input className="field num" dir="ltr" placeholder="מייל" aria-label="מייל" value={c.email} onChange={(e) => setC({ ...c, email: e.target.value })} />
-        <input className="field num" dir="ltr" placeholder="טלפון" aria-label="טלפון" value={c.phone} onChange={(e) => setC({ ...c, phone: e.target.value })} />
-        <IconButton name="plus" label="הוספת איש קשר" tone="primary" size={20} className="!h-11 !w-11" disabled={!c.name.trim()} onClick={add} />
+    <Frame icon="users" title="איש קשר לשמירה">
+      <div className="grid gap-2 sm:grid-cols-3">
+        <input className="field font-semibold" aria-label="שם" placeholder="שם" value={c.name} disabled={done} onChange={(e) => setC({ ...c, name: e.target.value })} />
+        <input className={`field num ${ok ? '' : 'invalid'}`} dir="ltr" aria-label="מייל" placeholder="מייל" value={c.email} disabled={done} onChange={(e) => setC({ ...c, email: e.target.value })} />
+        <input className="field num" dir="ltr" aria-label="טלפון" placeholder="טלפון" value={c.phone} disabled={done} onChange={(e) => setC({ ...c, phone: e.target.value })} />
       </div>
-    </section>
+      <button type="button" className="btn btn-primary mt-4" disabled={done || !ok} onClick={() => { remember({ name: c.name.trim(), email: c.email.trim(), phone: c.phone.trim() }); setDone(true); app.toast('נשמר באנשי הקשר') }}>
+        <Icon name={done ? 'check' : 'plus'} size={16} />
+        {done ? 'נשמר' : exists ? 'עדכון איש הקשר' : 'שמירה באנשי הקשר'}
+      </button>
+    </Frame>
   )
 }

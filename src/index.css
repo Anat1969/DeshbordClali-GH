@@ -113,3 +113,8 @@ b, strong { font-weight: 600; }
 .btn { transition: box-shadow .15s, background .15s, transform .15s; }
 .btn:hover { transform: translateY(-3px); }
 @media (prefers-reduced-motion: reduce) { .btn-float { animation: none; } .btn:hover { transform: none; } }
+
+/* הבוט כותב: שלוש נקודות שקופצות ברצף */
+@keyframes typing { 0%, 60%, 100% { transform: translateY(0); opacity: .35; } 30% { transform: translateY(-4px); opacity: 1; } }
+.typing-dot { animation: typing 1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .typing-dot { animation: none; } }
