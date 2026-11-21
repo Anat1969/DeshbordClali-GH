@@ -11,7 +11,11 @@ export type WorkAction =
   | { type: 'event'; title: string; event_date: string; event_time: string | null; location: string | null; people: string[]; description: string | null; category_name: string | null }
   | { type: 'task'; text: string }
   | { type: 'whatsapp'; to_name: string; to_phone: string; text: string }
+  | { type: 'contact'; name: string; email: string; phone: string }
   | { type: 'none'; message: string }
+
+// תור בשיחה, כפי שהוא נשלח לשרת כהקשר
+export interface Turn { role: 'me' | 'bot'; text: string }
 
 const FN = 'yoman-work'
 const LS_CONTACTS = 'sc_contacts_v1'
@@ -40,9 +44,33 @@ export async function saveContacts(c: Contact[]): Promise<void> {
   await api('contacts_set', { contacts: c }, FN)
 }
 
-export async function interpret(command: string, categories: string[]): Promise<{ reply: string; actions: WorkAction[] }> {
-  if (!supabase) throw new Error('מסך העבודה זמין אחרי חיבור לשרת.')
-  return api<{ reply: string; actions: WorkAction[] }>('interpret', { command, categories }, FN)
+// מיזוג רשימה: מוסיף רק את מי שחסר (לפי כתובת, ובלי כתובת לפי שם), בלי לדרוס קיימים
+export async function mergeContacts(list: Contact[]): Promise<{ added: number; total: number }> {
+  if (supabase) return api<{ added: number; total: number }>('contacts_merge', { contacts: list }, FN)
+  const cur = readLS<Contact[]>(LS_CONTACTS, [])
+  const fresh = list.filter((c) => c.name && !cur.some((x) => (c.email ? x.email.toLowerCase() === c.email.toLowerCase() : x.name === c.name)))
+  writeLS(LS_CONTACTS, [...cur, ...fresh])
+  return { added: fresh.length, total: cur.length + fresh.length }
+}
+
+// רשימה מודבקת, בכל צורה: "שם <כתובת>", "שם, כתובת, טלפון", או כתובות בלבד. שורה או פריט לכל איש קשר
+export function parseContacts(text: string): Contact[] {
+  const out: Contact[] = []
+  for (const raw of text.split(/[\n;]+/)) {
+    const email = raw.match(/[^\s<>(),;:"']+@[^\s<>(),;:"']+\.[^\s<>(),;:"']+/)?.[0] ?? ''
+    const rest = email ? raw.replace(email, ' ') : raw
+    const phone = rest.match(/\+?\d[\d\- ]{7,14}\d/)?.[0]?.trim() ?? ''
+    const name = (phone ? rest.replace(phone, ' ') : rest).replace(/[<>(),"'\t|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60)
+    if (!email && !phone) continue
+    out.push({ name: name || email.split('@')[0], email: email.toLowerCase(), phone })
+  }
+  return out
+}
+
+export async function interpret(command: string, categories: string[], history: Turn[] = []): Promise<{ reply: string; actions: WorkAction[]; options: string[] }> {
+  if (!supabase) throw new Error('השיחה זמינה אחרי חיבור לשרת.')
+  const r = await api<{ reply: string; actions: WorkAction[]; options?: string[] }>('interpret', { command, categories, history }, FN)
+  return { ...r, options: r.options ?? [] }
 }
 
 // פתיחת חלון כתיבה ב-Gmail, עם כתובת, נושא וגוף מוכנים. אנחנו לא שולחים: ענת בודקת ולוחצת שליחה

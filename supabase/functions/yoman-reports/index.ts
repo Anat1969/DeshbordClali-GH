@@ -1,4 +1,4 @@
-// דוח לילי "שדרוג אפליקציות": קריאה בלבד. אותו מפתח אישי כמו yoman-api. הכתיבה נעשית מהמשימה הלילית ישירות במסד
+// דוח לילי "שדרוג אפליקציות": קריאה, וסימון "טופל" לאפליקציה. אותו מפתח אישי כמו yoman-api. הכתיבה נעשית מהמשימה הלילית ישירות במסד
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const cors = {
@@ -22,6 +22,19 @@ Deno.serve(async (req) => {
 
   let b: Record<string, unknown>
   try { b = await req.json() } catch { return json({ error: 'bad_json' }, 400) }
+
+  // סימון או ביטול "טופל": רשימת הריפו שטופלו נשמרת בשורת הדוח
+  if (b.action === 'handle') {
+    const date = String(b.report_date ?? '')
+    const repo = String(b.repo ?? '').slice(0, 140)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !repo) return json({ error: 'bad_input' }, 400)
+    const { data: row } = await sb.from('yoman_app_reports').select('handled').eq('report_date', date).maybeSingle()
+    if (!row) return json({ error: 'not_found' }, 404)
+    const cur: string[] = Array.isArray(row.handled) ? row.handled : []
+    const handled = b.on === false ? cur.filter((r) => r !== repo) : [...new Set([...cur, repo])].slice(0, 200)
+    const { error } = await sb.from('yoman_app_reports').update({ handled }).eq('report_date', date)
+    return error ? json({ error: error.message }, 500) : json({ handled })
+  }
   if (b.action !== 'list') return json({ error: 'unknown_action' }, 400)
 
   const { data, error } = await sb.from('yoman_app_reports').select('*').order('report_date', { ascending: false }).limit(60)
