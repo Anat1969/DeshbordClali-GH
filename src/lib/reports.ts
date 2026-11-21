@@ -20,6 +20,7 @@ export interface Report {
   apps: AppRow[]
   todo: string[]
   handled: string[] // ריפו שסומנו כטופלו
+  sessions: Record<string, string> // ריפו -> כתובת של שיחת Claude שמחוברת לריפו הזה
   created_at: string
 }
 
@@ -32,7 +33,7 @@ export const STATUS_TEXT: Record<AppStatus, string> = {
 
 export async function listReports(): Promise<Report[]> {
   if (!supabase) return []
-  return ((await api<{ reports: Report[] }>('list', {}, 'yoman-reports')).reports ?? []).map((r) => ({ ...r, handled: r.handled ?? [] }))
+  return ((await api<{ reports: Report[] }>('list', {}, 'yoman-reports')).reports ?? []).map((r) => ({ ...r, handled: r.handled ?? [], sessions: r.sessions ?? {} }))
 }
 
 // סימון "טופל" לאפליקציה בדוח של יום מסוים. נשמר בשרת
