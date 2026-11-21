@@ -4,7 +4,7 @@ import CategoryLegend from './CategoryLegend'
 import TimeGrid from './TimeGrid'
 import Icon, { IconButton } from './Icon'
 import type { MilestoneMark } from '../lib/projects'
-import { SLOTS, slotOf, tint } from '../lib/categories'
+import { SLOTS, slotOf } from '../lib/categories'
 import {
   HE_DAYS_FULL, HE_DAYS_SHORT, HE_MONTHS, VIEW_LABEL, formatRange, formatShort, parseIso, todayIso, weekdayOf, windowDays,
   type ViewMode,
@@ -59,11 +59,9 @@ export default function CalendarMonthView({ mode, anchor, events, selected, flas
     const weekend = dow === 5 || dow === 6
     const { m, d } = parseIso(iso)
     const slotsHere = SLOTS.filter((sl) => list.some((e) => e.category === sl.key))
-    // צבע היום: צבע הקטגוריה. כמה קטגוריות באותו יום מוצגות כפסים. מתחת: לבן, או אפור בהיר בשישי ושבת
+    // רקע היום: רק "היום" צבוע בצהוב. שאר הימים לבנים (אפור בהיר בשישי ושבת), כי האירועים עצמם כבר נושאים את צבע הקטגוריה
     const base = weekend ? WEEKEND_BG : '#FFFFFF'
-    const colors = slotsHere.map((sl) => tint(sl.color))
-    const layer = colors.length === 0 ? null : colors.length === 1 ? `linear-gradient(${colors[0]}, ${colors[0]})` : `linear-gradient(90deg, ${colors.map((c, i) => `${c} ${(i * 100) / colors.length}% ${((i + 1) * 100) / colors.length}%`).join(', ')})`
-    const background = isToday ? `linear-gradient(#FFEE8C, #FFEE8C)` : layer ? `${layer}, ${base}` : isSel ? '#E8ECF4' : base
+    const background = isToday ? `linear-gradient(#FFEE8C, #FFEE8C)` : isSel ? '#E8ECF4' : base
     const big = mode === 'day' || mode === 'week'
     // בתחילת חודש ובתא הראשון מציגים את שם החודש
     const label = isGrid ? (d === 1 || idx === 0 ? `${d} ${HE_MONTHS[m].slice(0, 3)}` : String(d)) : formatShort(iso)
