@@ -9,7 +9,7 @@ import Home from './pages/Home'
 import Day from './pages/Day'
 import EventDetail from './pages/EventDetail'
 import Settings from './pages/Settings'
-import Welcome from './pages/Welcome'
+import HomeSwitch from './pages/HomeViews'
 import { Ctx } from './lib/ctx'
 import { useAccess } from './hooks/useAccess'
 import { useEvents } from './hooks/useEvents'
@@ -85,7 +85,7 @@ export default function App() {
           <main className="flex min-h-0 flex-1 flex-col overflow-auto">
             <Routes>
               {/* דף הבית הוא תדרוך הבוקר, והאפליקציה נפתחת עליו */}
-              <Route path="/" element={<Welcome />} />
+              <Route path="/" element={<HomeSwitch />} />
               <Route path="/welcome" element={<Navigate to="/" replace />} />
               <Route path="/calendar" element={<Home uploading={up.stage === 'working'} step={up.step} />} />
               <Route path="/day" element={<Day uploading={up.stage === 'working'} step={up.step} />} />

@@ -3,6 +3,7 @@ import AIMenu from './AIMenu'
 import Icon, { type IconName } from './Icon'
 import Logo from './Logo'
 import Guide from './Guide'
+import ViewPicker from './ViewPicker'
 import { demoMode } from '../lib/supabase'
 
 // כפתורי גישה ישירה למסכים. בנייד: אייקונים בלבד. במסך רחב: אייקון ושם
@@ -37,6 +38,7 @@ export default function TopBar() {
         ))}
       </nav>
       <div className="flex shrink-0 items-center gap-2">
+        <ViewPicker />
         <Guide />
         {demoMode && (
           <span className="hidden rounded-md bg-soft px-2 py-1 text-xs 2xl:inline" title="אין חיבור ל-Supabase. הנתונים נשמרים בדפדפן הזה בלבד">
