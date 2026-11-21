@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import TopBar from './components/TopBar'
+import { GuideLine } from './components/Guide'
 import ExtractionReview from './components/ExtractionReview'
 import { PasteDialog } from './components/UploadZone'
 import { formatLong } from './lib/dateUtils'
@@ -80,6 +81,7 @@ export default function App() {
       >
         <div className="flex h-dvh flex-col">
           <TopBar />
+          <GuideLine />
           <main className="flex min-h-0 flex-1 flex-col overflow-auto">
             <Routes>
               {/* דף הבית הוא תדרוך הבוקר, והאפליקציה נפתחת עליו */}

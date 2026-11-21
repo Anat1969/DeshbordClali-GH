@@ -42,11 +42,13 @@ export default function Upgrades() {
       return false
     }
   }
-  // אין קישור שפותח שיחה ישר על ריפו, ולכן: ההנחיה מועתקת, Claude Code נפתח, ובוחרים שם את הריפו
+  // שיחה שמחוברת לריפו של האפליקציה נוצרת מראש ונשמרת בדוח. הכפתור פותח אותה, וההנחיה מועתקת להדבקה.
+  // בלי שיחה מוכנה: נפתח Claude Code, ושם בוחרים את הריפו ידנית
   const start = async (a: AppRow) => {
     const ok = await copy(a)
-    window.open(CLAUDE_CODE, '_blank', 'noopener')
-    if (ok) app.toast(`ההנחיה הועתקה. בחרי את ${a.repo.split('/')[1]} והדביקי`)
+    const url = r?.sessions[a.repo]
+    window.open(url ?? CLAUDE_CODE, '_blank', 'noopener')
+    if (ok) app.toast(url ? 'ההנחיה הועתקה. הדביקי אותה בשיחה שנפתחה' : `ההנחיה הועתקה. בחרי את ${a.repo.split('/')[1]} והדביקי`)
   }
   const toTask = async (a: AppRow) => {
     try {
@@ -112,7 +114,7 @@ export default function Upgrades() {
           {open.length > 0 && (
             <section className="mb-8" aria-label="מה צריך לעשות">
               <h2 className="m-0 mb-1 text-xl font-semibold">מה צריך לעשות <span className="text-base font-normal text-mute">{left ? `· ${left} פתוחות, הדחופות קודם` : '· הכול טופל'}</span></h2>
-              <p className="m-0 mb-3 text-sm text-mute">"המשך בשיחה חדשה" מעתיק הנחיה מוכנה ופותח את Claude Code. שם בוחרים את הריפו שכתוב על הכפתור, ומדביקים.</p>
+              <p className="m-0 mb-3 text-sm text-mute">"המשך בשיחה" פותח שיחת Claude שמחוברת לריפו של אותה אפליקציה, ומעתיק הנחיה מוכנה. נשאר להדביק ולשלוח.</p>
               <ol className="m-0 grid list-none gap-3 p-0 lg:grid-cols-2 2xl:grid-cols-3">
                 {open.map((a, i) => {
                   const done = handled.has(a.repo)
@@ -131,7 +133,7 @@ export default function Upgrades() {
                         <button type="button" className="btn btn-primary col-span-2 !h-auto !min-h-11 !justify-start gap-2 !px-3 !py-1.5 text-right" disabled={done} onClick={() => start(a)}>
                           <Icon name="spark" size={18} className="shrink-0" />
                           <span className="min-w-0">
-                            <span className="block leading-tight">המשך בשיחה חדשה</span>
+                            <span className="block leading-tight">{r.sessions[a.repo] ? 'המשך בשיחה של האפליקציה' : 'העתקת הנחיה ופתיחת Claude'}</span>
                             <span className="num block break-all text-xs font-normal leading-tight opacity-80" dir="ltr" style={{ textAlign: 'right' }}>{a.repo}</span>
                           </span>
                           <Icon name="external" size={14} className="ms-auto shrink-0" />
@@ -178,7 +180,7 @@ export default function Upgrades() {
                     <div>{a.done}</div>
                     {!a.todo && (
                       <button type="button" className="mt-1 flex items-center gap-1 text-sm text-navy underline-offset-2 hover:underline" onClick={() => start(a)}>
-                        <Icon name="spark" size={14} />שיחה חדשה על האפליקציה הזו
+                        <Icon name="spark" size={14} />{r.sessions[a.repo] ? 'שיחה על האפליקציה הזו' : 'העתקת הנחיה ופתיחת Claude'}
                       </button>
                     )}
                   </div>

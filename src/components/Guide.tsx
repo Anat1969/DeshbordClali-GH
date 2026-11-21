@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Icon, { IconButton } from './Icon'
 import { useApp } from '../lib/ctx'
-import { guideFor, itemKey, markSeenGuide, markTried, potential, seenGuide, tried, type GuideItem } from '../lib/guide'
+import { guideFor, itemKey, markTried, potential, tried, type GuideItem } from '../lib/guide'
 
 // "מה אפשר לעשות כאן": כפתור קבוע בסרגל העליון, באותו מקום בכל מסך.
-// נפתח לבד בביקור הראשון בכל מסך. כל אפשרות שאפשר להפעיל היא כפתור, ומה שנוסה מסומן
+// נפתח רק בלחיצה. כל אפשרות שאפשר להפעיל היא כפתור, ומה שנוסה מסומן
 export default function Guide() {
   const app = useApp()
   const nav = useNavigate()
@@ -14,13 +14,13 @@ export default function Guide() {
   const [open, setOpen] = useState(false)
   const [done, setDone] = useState(tried)
 
+  // מעבר מסך סוגר את החלון. השורה הקבועה שמתחת לסרגל פותחת אותו באירוע
+  useEffect(() => { setOpen(false) }, [path])
   useEffect(() => {
-    if (page && !seenGuide(path)) {
-      setOpen(true)
-      markSeenGuide(path)
-    } else setOpen(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path])
+    const show = () => setOpen(true)
+    window.addEventListener('yoman-guide', show)
+    return () => window.removeEventListener('yoman-guide', show)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -111,5 +111,18 @@ export default function Guide() {
         </>
       )}
     </>
+  )
+}
+
+// שורת הסבר קצרה וקבועה מתחת לסרגל העליון, בכל מסך: בשביל מה המסך, וכניסה לכל האפשרויות
+export function GuideLine() {
+  const page = guideFor(useLocation().pathname)
+  if (!page) return null
+  return (
+    <button type="button" onClick={() => window.dispatchEvent(new Event('yoman-guide'))} title="מה אפשר לעשות כאן" className="flex w-full shrink-0 items-center gap-2 bg-[#FFFBE6] px-3 py-1.5 text-right text-[15px] hover:bg-[#FFF8D6] sm:px-6">
+      <Icon name="bulb" size={16} className="shrink-0" />
+      <span className="min-w-0 flex-1"><b>{page.name}:</b> {page.why}</span>
+      <span className="shrink-0 font-semibold text-navy underline-offset-4 hover:underline"><span className="num">{page.items.length}</span> אפשרויות</span>
+    </button>
   )
 }

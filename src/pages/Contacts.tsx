@@ -117,7 +117,7 @@ export default function Contacts() {
       <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_1.4fr_1fr_auto]">
         <input className="field" placeholder="שם חדש" aria-label="שם" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && add()} />
         <input className={`field num ${!draft.email.trim() || EMAIL.test(draft.email.trim()) ? '' : 'invalid'}`} dir="ltr" placeholder="מייל" aria-label="מייל" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && add()} />
-        <input className="field num" dir="ltr" placeholder="טלפון" aria-label="טלפון" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && add()} />
+        <input className="field num" dir="ltr" placeholder="טלפון: 050-1234567" aria-label="טלפון" value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} onKeyDown={(e) => e.key === 'Enter' && add()} />
         <IconButton name="plus" label="הוספת איש קשר" tone="primary" size={20} className="!h-11 !w-11" disabled={!valid(draft)} onClick={add} />
       </div>
 
@@ -172,7 +172,7 @@ export default function Contacts() {
             })}
           </ul>
           <p className="m-0 mt-5 text-sm text-mute">
-            מייל וווצאפ פותחים חלון כתיבה ריק, והשליחה בלחיצה שלך. "ניסוח בשיחה" מבקש מהבוט לכתוב את ההודעה. כפתור אפור: חסרה כתובת או טלפון.
+            מייל וווצאפ פותחים חלון כתיבה ריק, והשליחה בלחיצה שלך. טלפון נכתב כנייד ישראלי: 050-1234567, 0501234567 או 972501234567+. "ניסוח בשיחה" מבקש מהבוט לכתוב את ההודעה. כפתור אפור: חסרה כתובת או טלפון.
           </p>
         </>
       )}
