@@ -32,7 +32,7 @@ function smooth(pts: [number, number][]): string {
   return d
 }
 
-function Terrain({ brief }: { brief: Brief }) {
+export function Terrain({ brief }: { brief: Brief }) {
   const scale = brief.dayType === 'heavy' ? 40 : brief.dayType === 'normal' ? 34 : 28
   // עומס לכל רבע שעה, ואז החלקה
   const raw: number[] = []
