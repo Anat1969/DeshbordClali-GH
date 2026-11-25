@@ -22,6 +22,8 @@ import Projects from './pages/Projects'
 import Tasks from './pages/Tasks'
 import Upgrades from './pages/Upgrades'
 import Contacts from './pages/Contacts'
+import Office from './pages/Office'
+import OfficeReturn from './components/OfficeReturn'
 
 export default function App() {
   const access = useAccess()
@@ -82,6 +84,7 @@ export default function App() {
         <div className="flex h-dvh flex-col">
           <TopBar />
           <GuideLine />
+          <OfficeReturn />
           <main className="flex min-h-0 flex-1 flex-col overflow-auto">
             <Routes>
               {/* דף הבית הוא תדרוך הבוקר, והאפליקציה נפתחת עליו */}
@@ -94,6 +97,7 @@ export default function App() {
               <Route path="/projects" element={<Projects />} />
               <Route path="/upgrades" element={<Upgrades />} />
               <Route path="/contacts" element={<Contacts />} />
+              <Route path="/office" element={<Office />} />
               <Route path="/event/:id" element={<EventDetail />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="*" element={<p className="p-8">הדף לא נמצא. אפשר לחזור ליומן דרך שם האפליקציה למעלה.</p>} />

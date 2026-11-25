@@ -4,7 +4,7 @@ import type { CSSProperties } from 'react'
 export type IconName =
   | 'briefcase' | 'glass' | 'cross' | 'book' | 'home' | 'star' | 'flag' | 'plus' | 'x' | 'mic' | 'stop'
   | 'chevronR' | 'chevronL' | 'pencil' | 'note' | 'clock' | 'pin' | 'users' | 'calendar' | 'file' | 'sliders' | 'upload' | 'text'
-  | 'check' | 'link' | 'copy' | 'key' | 'logout' | 'sun' | 'bulb' | 'quote' | 'news' | 'target' | 'music' | 'spark' | 'dumbbell' | 'external' | 'mail' | 'send' | 'chart' | 'diamond' | 'paperclip' | 'globe' | 'play' | 'chevronD' | 'chevronU'
+  | 'check' | 'link' | 'copy' | 'key' | 'logout' | 'sun' | 'bulb' | 'quote' | 'news' | 'target' | 'music' | 'spark' | 'dumbbell' | 'external' | 'mail' | 'send' | 'chart' | 'diamond' | 'paperclip' | 'globe' | 'moon' | 'shield' | 'refresh' | 'play' | 'chevronD' | 'chevronU'
 
 const PATHS: Record<IconName, React.ReactNode> = {
   briefcase: (<><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7M3 13h18" /></>),
@@ -52,6 +52,9 @@ const PATHS: Record<IconName, React.ReactNode> = {
   play: (<><rect x="3" y="5" width="18" height="14" rx="4" /><path d="M10 9.5v5l4.5-2.5z" /></>),
   chevronD: <path d="M5 9l7 7 7-7" />,
   chevronU: <path d="M5 15l7-7 7 7" />,
+  moon: <path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" />,
+  shield: (<><path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z" /><path d="M9 12l2 2 4-4" /></>),
+  refresh: (<><path d="M20 11a8 8 0 0 0-14.6-4.5M4 4v4h4" /><path d="M4 13a8 8 0 0 0 14.6 4.5M20 20v-4h-4" /></>),
   globe: (<><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" /></>),
 }
 
