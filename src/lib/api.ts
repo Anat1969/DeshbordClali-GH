@@ -8,6 +8,16 @@ const ANON = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
 export const getKey = (): string => OPEN_KEY
 
+// מפתח אישור של המשרד: לא בקוד האתר. ענת מזינה אותו פעם אחת בכל מכשיר, והוא נשלח רק לפונקציית המשרד
+export const APPROVER_LS = 'yoman_approver_v1'
+function extraHeaders(fn: string): Record<string, string> {
+  if (fn !== 'yoman-office') return {}
+  try {
+    const a = localStorage.getItem(APPROVER_LS)
+    return a ? { 'x-yoman-approver': a } : {}
+  } catch { return {} }
+}
+
 export class ApiError extends Error {
   constructor(public status: number, public code: string) {
     super(code)
@@ -19,7 +29,7 @@ export async function api<T = Record<string, unknown>>(action: string, payload: 
   if (!supabase || !URL_BASE) throw new ApiError(0, 'no_backend')
   const res = await fetch(`${URL_BASE}/functions/v1/${fn}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-yoman-key': getKey(), apikey: ANON ?? '' },
+    headers: { 'Content-Type': 'application/json', 'x-yoman-key': getKey(), apikey: ANON ?? '', ...extraHeaders(fn) },
     body: JSON.stringify({ action, ...payload }),
   })
   const data = await res.json().catch(() => ({}))
