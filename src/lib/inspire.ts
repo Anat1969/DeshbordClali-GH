@@ -12,6 +12,8 @@ export interface InspireCard {
   meta?: string
   source: string
   url?: string
+  // קישור עמוק: ישר למקום שבו הרעיון מופיע באפליקציה המקורית, כדי להעמיק בו
+  deep?: string | null
   options?: string[]
   correct?: number
   explanation?: string
@@ -19,7 +21,7 @@ export interface InspireCard {
   app?: { name: string; cover: string | null; url: string | null }
 }
 
-const LS_CACHE = 'yoman_inspire_v2'
+const LS_CACHE = 'yoman_inspire_v3'
 const LS_SEEN = 'yoman_welcome_day_v1'
 
 // התאריך המקומי בישראל, YYYY-MM-DD. בלי ארגומנט: היום. עם חותמת זמן: היום שבו היא נרשמה

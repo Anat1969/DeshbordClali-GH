@@ -121,7 +121,9 @@ function Card({ card, big, index = 0 }: { card: InspireCard; big?: boolean; inde
   const k = KIND[card.kind]
   const poetic = POETIC.includes(card.kind)
   const appName = card.app?.name ?? card.source
-  const appUrl = card.app?.url ?? card.url ?? null
+  // הקישור מוביל ישר לרעיון עצמו. רק אם אין לו מקום משלו, לאפליקציה
+  const deep = card.deep ?? null
+  const appUrl = deep ?? card.app?.url ?? card.url ?? null
   return (
     <article className={`rise flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-btn ${big ? 'p-6 sm:p-9' : 'p-5'}`} style={{ borderTop: `4px solid ${k.bar}`, '--d': `${index * 120}ms` } as React.CSSProperties}>
       <p className="flex items-center gap-2 text-sm font-semibold" style={{ color: k.ink }}>
@@ -139,9 +141,9 @@ function Card({ card, big, index = 0 }: { card: InspireCard; big?: boolean; inde
       {/* תחתית הכרטיס: האפליקציה שממנה בא, עם האייקון שלה */}
       <footer className="mt-auto flex items-center justify-between gap-3 pt-4">
         {appUrl ? (
-          <a href={appUrl} target="_blank" rel="noopener noreferrer" className="flex min-w-0 items-center gap-2.5 text-sm text-mute hover:text-ink" title={`פתיחת ${appName}`}>
+          <a href={appUrl} target="_blank" rel="noopener noreferrer" className={`flex min-w-0 items-center gap-2.5 text-sm hover:text-ink ${deep ? 'font-semibold text-navy' : 'text-mute'}`} title={deep ? `להעמקה: ${appName}, ישר למקום של הרעיון` : `פתיחת ${appName}`}>
             <AppIcon cover={card.app?.cover ?? null} name={appName} />
-            <span className="min-w-0 break-words">מתוך {appName}</span>
+            <span className="min-w-0 break-words">{deep ? `להעמקה ב${appName}` : `מתוך ${appName}`}</span>
             <Icon name="external" size={12} className="shrink-0" />
           </a>
         ) : (
