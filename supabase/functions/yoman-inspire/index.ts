@@ -49,22 +49,22 @@ Deno.serve(async (req) => {
 
   const tasks: Promise<Card | null>[] = [
     // משפט העצמה: פתגם מתוך מאמרי התרבות
-    pick(sb, 'culture_articles', 'concept,proverb', 'id', (q) => q.not('proverb', 'is', null).neq('proverb', ''), 1).then((r) =>
-      r ? { id: 'power', kind: 'power', label: 'משפט העצמה', title: r.concept, text: clip(r.proverb, 220), source: 'CULTURA' } : null),
+    pick(sb, 'culture_articles', 'id,concept,proverb', 'id', (q) => q.not('proverb', 'is', null).neq('proverb', ''), 1).then((r) =>
+      r ? { id: 'power', kind: 'power', label: 'משפט העצמה', title: r.concept, text: clip(r.proverb, 220), source: 'CULTURA', ref: r.id } : null),
     // תובנת ידע
-    pick(sb, 'culture_articles', 'concept,lede,insight', 'id', (q) => q.not('insight', 'is', null), 4).then((r) =>
-      r ? { id: 'insight', kind: 'insight', label: 'תובנת ידע', title: r.concept, text: clip(r.lede || r.insight, 380), source: 'CULTURA' } : null),
+    pick(sb, 'culture_articles', 'id,concept,lede,insight', 'id', (q) => q.not('insight', 'is', null), 4).then((r) =>
+      r ? { id: 'insight', kind: 'insight', label: 'תובנת ידע', title: r.concept, text: clip(r.lede || r.insight, 380), source: 'CULTURA', ref: r.id } : null),
     // אימון: שאלה עם תשובות (בלי שאלות שדורשות תמונה)
-    pick(sb, 'dapar_questions', 'prompt,instruction_text,options,correct_index,explanation', 'id', (q) => q.is('figure', null).not('options', 'is', null), 2).then((r) => {
+    pick(sb, 'dapar_questions', 'domain,layer,prompt,instruction_text,options,correct_index,explanation', 'id', (q) => q.is('figure', null).not('options', 'is', null), 2).then((r) => {
       if (!r || !Array.isArray(r.options)) return null
       // deno-lint-ignore no-explicit-any
       const options = r.options.map((o: any) => (typeof o === 'string' ? o : String(o?.text ?? o?.label ?? ''))).filter(Boolean)
       if (options.length < 2 || typeof r.correct_index !== 'number') return null
-      return { id: 'train', kind: 'train', label: 'אימון', text: clip(r.prompt, 240), hint: clip(r.instruction_text, 160), options, correct: r.correct_index, explanation: clip(r.explanation, 300), source: 'DAPAR' }
+      return { id: 'train', kind: 'train', label: 'אימון', text: clip(r.prompt, 240), hint: clip(r.instruction_text, 160), options, correct: r.correct_index, explanation: clip(r.explanation, 300), source: 'DAPAR', ref: `domain=${encodeURIComponent(r.domain ?? '')}&layer=${encodeURIComponent(r.layer ?? '')}` }
     }),
     // תרגיל להיום
-    pick(sb, 'mahut_articles', 'title,pragmatic_action', 'id', (q) => q.eq('published', true).not('pragmatic_action', 'is', null).neq('pragmatic_action', ''), 3).then((r) =>
-      r ? { id: 'exercise', kind: 'exercise', label: 'תרגיל להיום', title: r.title, text: clip(r.pragmatic_action, 360), source: 'המהות' } : null),
+    pick(sb, 'mahut_articles', 'id,title,pragmatic_action', 'id', (q) => q.eq('published', true).not('pragmatic_action', 'is', null).neq('pragmatic_action', ''), 3).then((r) =>
+      r ? { id: 'exercise', kind: 'exercise', label: 'תרגיל להיום', title: r.title, text: clip(r.pragmatic_action, 360), source: 'המהות', ref: r.id } : null),
     // אקטואליה: סיכום אחרון מהרדאר
     (async () => {
       const { data: latest } = await sb.from('radar_digests').select('date').order('date', { ascending: false }).limit(1)
@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
       const r = await pick(sb, 'radar_digests', 'headline,summary,topic_id,date', 'id', (q) => q.eq('date', date), 5)
       if (!r) return null
       const { data: t } = await sb.from('radar_topics').select('keyword').eq('id', r.topic_id).maybeSingle()
-      return { id: 'news', kind: 'news', label: 'אקטואליה', title: r.headline, text: clip(r.summary, 380), meta: [t?.keyword, r.date].filter(Boolean).join(' · '), source: 'RADAR' }
+      return { id: 'news', kind: 'news', label: 'אקטואליה', title: r.headline, text: clip(r.summary, 380), meta: [t?.keyword, r.date].filter(Boolean).join(' · '), source: 'RADAR', ref: r.topic_id }
     })(),
     // שיר: קישור לאפליקציית "שיר ביום"
     (async () => {
@@ -82,8 +82,8 @@ Deno.serve(async (req) => {
       return url ? { id: 'song', kind: 'song', label: 'שיר להיום', text: 'השיר של היום מחכה לך באפליקציית שיר ביום.', url, source: 'שיר ביום' } : null
     })(),
     // רעיון מזוקק
-    pick(sb, 'zikuk_dnas', 'title,distillation,essence', 'id', (q) => q.eq('published', true).not('distillation', 'is', null), 6).then((r) =>
-      r ? { id: 'distilled', kind: 'distilled', label: 'רעיון מזוקק', title: r.title, text: clip(r.distillation, 240), meta: clip(r.essence, 220), source: 'ZIKUK' } : null),
+    pick(sb, 'zikuk_dnas', 'id,title,distillation,essence', 'id', (q) => q.eq('published', true).not('distillation', 'is', null), 6).then((r) =>
+      r ? { id: 'distilled', kind: 'distilled', label: 'רעיון מזוקק', title: r.title, text: clip(r.distillation, 240), meta: clip(r.essence, 220), source: 'ZIKUK', ref: r.id } : null),
     // מילה להרהור
     pick(sb, 'faces_words', 'text', 'id', (q) => q, 8).then((r) =>
       r ? { id: 'word', kind: 'word', label: 'מילה להרהור', title: r.text, text: 'מה המילה הזו אומרת לך היום?', source: 'FACES' } : null),
@@ -103,6 +103,33 @@ Deno.serve(async (req) => {
     const d = data?.[0]?.data
     if (d) info.set(name, { name, cover: d.coverImage ?? null, url: d.vercelUrl ?? d.previewUrl ?? d.websiteUrl ?? null })
   }))
-  const withApp = cards.map((c) => ({ ...c, app: info.get(APPS[String(c.kind)]) ?? { name: String(c.source), cover: null, url: null } }))
+  // קישור עמוק: ישר למקום שבו הרעיון מופיע באפליקציה, ולא לדף הבית שלה.
+  // כל אפליקציה והמבנה של הכתובות שלה (נבדק בקוד של כל ריפו, 26.11.2026)
+  const DEEP: Record<string, (base: URL, ref: string) => string | null> = {
+    // מושגי תרבות: HashRouter תחת /cultura-GH/, דף מאמר שמציג גם את הפתגם וגם את התובנה
+    power: (b, r) => `${b.origin}/cultura-GH/#/article/${encodeURIComponent(r)}`,
+    insight: (b, r) => `${b.origin}/cultura-GH/#/article/${encodeURIComponent(r)}`,
+    // דפ"ר: אין דף לשאלה בודדת, ולכן תרגול באותו תחום ובאותה שכבה של השאלה
+    train: (b, r) => `${b.origin}/practice?${r}`,
+    // מהות: הכתבה עצמה, שבה מופיע התרגיל בקטע "מה עושים עם זה"
+    exercise: (b, r) => `${b.origin}/#/a/${encodeURIComponent(r)}`,
+    // רדאר: דף הנושא, שנפתח על התקציר האחרון
+    news: (b, r) => `${b.origin}/topic/${encodeURIComponent(r)}`,
+    // זיקוק: דף ה-DNA עצמו
+    distilled: (b, r) => `${b.origin}/dna/${encodeURIComponent(r)}`,
+    // נקודות מבט: אין דף למילה בודדת, ולכן אוסף המילים
+    word: (b) => `${b.origin}/#/faces/words`,
+  }
+  const deepOf = (c: Card, base: string | null) => {
+    const make = DEEP[String(c.kind)]
+    if (!make || !base) return null
+    try { return make(new URL(base), String(c.ref ?? '')) } catch { return null }
+  }
+  const withApp = cards.map((c) => {
+    const app = info.get(APPS[String(c.kind)]) ?? { name: String(c.source), cover: null, url: null }
+    const deep = c.ref || c.kind === 'word' ? deepOf(c, app.url) : null
+    const { ref: _ref, ...rest } = c
+    return { ...rest, deep, app }
+  })
   return json({ date: today, cards: withApp })
 })
